@@ -1,20 +1,27 @@
-/**
- * main.ts
- *
- * Bootstraps Vuetify and other plugins then mounts the App`
- */
+import './assets/main.css'
 
-// Plugins
-import { registerPlugins } from '@/plugins'
-
-// Components
-import App from './App.vue'
-
-// Composables
 import { createApp } from 'vue'
+import App from './App.vue'
+import router from './router'
+import 'vuetify/styles'
+import '@mdi/font/css/materialdesignicons.css';
+import { createVuetify } from 'vuetify'
+import axios from 'axios';
+import * as components from 'vuetify/components'
+import * as directives from 'vuetify/directives'
 
-const app = createApp(App)
+const vuetify = createVuetify({
+    theme: {
+        defaultTheme: 'light',
+    },
+    components,
+    directives,
+});
 
-registerPlugins(app)
+const app = createApp(App).use(vuetify)
+
+axios.defaults.baseURL = 'https://048ffdcf22d399.lhr.life';
+
+app.use(router)
 
 app.mount('#app')
