@@ -73,29 +73,17 @@ const { getRootProps, getInputProps, isDragActive, isFileDialogActive, ...rest }
     maxFiles: 1,
 });
 
-// watch(state, () => {
-//     console.log('state', state);
-// });
-
-// watch(isDragActive, () => {
-//     console.log('isDragActive', isDragActive.value, rest);
-// });
-
-// watch(isFileDialogActive, () => {
-//     //
-// });
-
-watch(() => props.file, (newFile) => {
-    if (newFile && !state.files.some(file => file.file.name === newFile)) {
-        state.files.push({
-            file: { name: newFile },
-            uploading: false,
-            uploadError: false,
+function getPresignedUrl() {
+    axios.get(
+        `/api/do-spaces/upload/request?extension=${props.extension}${props.folder ? "&folder=" + props.folder : ""
+        }${props.publicRead ? "&public=true" : ""}`,
+    )
+        .then(response => {
+            filename.value = response.data.filename;
+            hostname.value = new URL(response.data.url).origin;
+            signedUrl.value = response.data.url;
         });
-    };
-
-}, { immediate: true });
-
+};
 
 function onDrop(acceptFiles, rejectReasons) {
     if (acceptFiles.length > 0) {
@@ -113,7 +101,7 @@ function onDrop(acceptFiles, rejectReasons) {
             uploadError: false,
         }));
     }
-}
+};
 
 async function saveFiles(files) {
     console.log(files[0]);
@@ -136,20 +124,7 @@ async function saveFiles(files) {
             state.files[0].uploadError = true;
             emit('upload-error');
         });
-}
-
-function handleClickDeleteFile(index) {
-    console.log(filename.value);
-    axios.delete(`/api/do-spaces/file/${btoa(filename.value)}`)
-        .then(response => {
-            state.files.splice(index, 1);
-        })
-        .catch(err => {
-            console.error(err);
-        });
-
-    emit('file-removed', {});
-}
+};
 
 function handleImageUpload(file, response) {
     emit("uploaded", {
@@ -158,17 +133,30 @@ function handleImageUpload(file, response) {
     });
 };
 
-function getPresignedUrl() {
-    axios.get(
-        `/api/do-spaces/upload/request?extension=${props.extension}${props.folder ? "&folder=" + props.folder : ""
-        }${props.publicRead ? "&public=true" : ""}`,
-    )
+function handleClickDeleteFile(index) {
+    const fileName = props.file ? state.files[0].file.name : filename.value;
+    const encodedFileName = btoa(fileName);
+
+    axios.delete(`/api/do-spaces/file/${encodedFileName}`)
         .then(response => {
-            filename.value = response.data.filename;
-            hostname.value = new URL(response.data.url).origin;
-            signedUrl.value = response.data.url;
+            state.files.splice(index, 1);
+            emit('file-removed', {});
+        })
+        .catch(err => {
+            console.error(err);
         });
-};
+}
+
+watch(() => props.file, (newFile) => {
+    if (newFile && !state.files.some(file => file.file.name === newFile)) {
+        state.files.push({
+            file: { name: newFile },
+            uploading: false,
+            uploadError: false,
+        });
+    };
+
+}, { immediate: true });
 
 onMounted(() => {
     getPresignedUrl();

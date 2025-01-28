@@ -18,17 +18,35 @@
         <v-list-item link to="/" exact>
           <v-list-item-title>Home</v-list-item-title>
         </v-list-item>
+        <v-list-item link to="/subscriptions">
+          <v-list-item-title>Abonnementen</v-list-item-title>
+        </v-list-item>
         <v-list-item link to="/packages">
           <v-list-item-title>Pakketten</v-list-item-title>
-        </v-list-item>
-        <v-list-item link to="/maps">
-          <v-list-item-title>Mappen</v-list-item-title>
         </v-list-item>
         <v-list-item link to="/options">
           <v-list-item-title>Opties</v-list-item-title>
         </v-list-item>
+        <v-list-item link to="/magazines">
+          <v-list-item-title>Tijdschriften</v-list-item-title>
+        </v-list-item>
+        <v-list-item link to="/magazine-groups">
+          <v-list-item-title>Tijdschrift groepen</v-list-item-title>
+        </v-list-item>
+        <v-list-item link to="/additional-magazine-groups">
+          <v-list-item-title>Aanvullende tijdschrift groepen</v-list-item-title>
+        </v-list-item>
         <v-list-item link to="/editions">
           <v-list-item-title>Edities</v-list-item-title>
+        </v-list-item>
+        <v-list-item link to="/simple-edition-choices">
+          <v-list-item-title>Simpele editie keuzes</v-list-item-title>
+        </v-list-item>
+        <v-list-item link to="/weekly-edition-choices">
+          <v-list-item-title>Wekelijkse editie keuzes</v-list-item-title>
+        </v-list-item>
+        <v-list-item link to="/subscription-add-ons">
+          <v-list-item-title>Abonnement add-ons</v-list-item-title>
         </v-list-item>
         <v-list-item link to="/durations">
           <v-list-item-title>Looptijden</v-list-item-title>

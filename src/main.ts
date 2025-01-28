@@ -20,7 +20,7 @@ const vuetify = createVuetify({
 
 const app = createApp(App).use(vuetify)
 
-axios.defaults.baseURL = 'https://048ffdcf22d399.lhr.life';
+axios.defaults.baseURL = 'https://f2dd9358180749.lhr.life';
 
 app.use(router)
 

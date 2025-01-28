@@ -2,14 +2,18 @@
     <v-app>
         <v-card>
             <v-card-title>
-                <v-btn color="primary" @click="showCreateOptionDialog">Nieuwe optie</v-btn>
+                <v-btn color="primary" @click="showCreateAdditionalMagazineDialog">Nieuwe optie</v-btn>
             </v-card-title>
             <v-data-table :headers="headers" :items="tableRows" :items-per-page="itemsPerPage" :sort-by="sortBy.key"
                 :sort-desc="sortBy.order" :server-items-length="totalItems" :loading="loadingDataTable"
-                @update:options="updateOptions">
+                @update:additionalMagazines="updateAditionalMagazines">
                 <template v-slot:item.actions="{ item }">
-                    <v-icon color="warning" @click="showEditOptionDialog(item)">mdi-pencil</v-icon>
-                    <v-icon color="red" @click="removeOptionPrompt(item)">mdi-delete</v-icon>
+                    <v-icon color="warning" @click="showEditAdditionalMagazineDialog(item)">mdi-pencil</v-icon>
+                    <v-icon color="red" @click="showRemoveAdditionalMagazineDialog(item)">mdi-delete</v-icon>
+
+                    <v-icon color="warning" @click="showEditMagazineGroupDialog(item)">mdi-pencil</v-icon>
+                    <v-icon color="red" @click="showRemoveMagazineGroupDialog(item)">mdi-delete</v-icon>
+                    <v-btn color="primary" @click="showAddMagazinesDialog(item)">Tijdschriften toevoegen</v-btn>
                 </template>
             </v-data-table>
         </v-card>

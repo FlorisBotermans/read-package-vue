@@ -80,11 +80,11 @@ const snackbarColor = ref('success');
 const giftToDelete = ref(null);
 
 const headers = ref([
-    { text: "Id", value: "id", sortable: true },
-    { text: "Naam", value: "name", sortable: true },
-    { text: "Geldig bij", value: "valid_after_months", sortable: true },
-    { text: "Image", value: "image_url", sortable: false },
-    { text: "Acties", value: "actions", sortable: false }
+    { title: "Id", value: "id", sortable: true },
+    { title: "Naam", value: "name", sortable: true },
+    { title: "Geldig bij", value: "valid_after_months", sortable: true },
+    { title: "Afbeelding", value: "image_url", sortable: false },
+    { title: "Acties", value: "actions", sortable: false }
 ]);
 
 const gift = ref({
@@ -102,8 +102,6 @@ const showSnackbar = (message, color = 'success') => {
 const hideSnackbar = () => {
     snackbar.value = false;
 };
-
-const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage.value));
 
 const isFormValid = computed(() => {
     return gift.value.name && gift.value.valid_after_months && gift.value.image_url;
