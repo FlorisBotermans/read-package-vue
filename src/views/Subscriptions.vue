@@ -2,6 +2,8 @@
     <v-app>
         <v-card class="ma-4">
             <v-card-title>
+                <v-text-field v-model="search" label="Zoeken" @input="userInput"></v-text-field>
+                <v-spacer></v-spacer>
                 <v-btn color="primary" @click="showCreateSubscriptionDialog">Nieuw abonnement</v-btn>
             </v-card-title>
             <v-data-table :headers="headers" :items="tableRows" :items-per-page="itemsPerPage" :sort-by="sortBy.key"
@@ -38,6 +40,9 @@
                                     </v-list-item>
                                     <v-list-item @click="showAddGiftsDialog(item)">
                                         <v-list-item-title>Welkomscadeau's toevoegen</v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item @click="showAddDurationsDialog(item)">
+                                        <v-list-item-title>Looptijden toevoegen</v-list-item-title>
                                     </v-list-item>
                                     <v-list-item @click="showAddDigitalAddOnDialog(item)">
                                         <v-list-item-title>Digitale add-on toevoegen</v-list-item-title>
@@ -189,6 +194,9 @@
 
                     <v-data-table v-if="!loadingEditionChoices" :headers="addedEditionChoicesTableHeaders"
                         :items="addedEditionChoices" item-value="id" class="mt-3">
+                        <template v-slot:item.additional_price="{ item }">
+                            €{{ parseFloat(item.additional_price).toFixed(2) }}
+                        </template>
                         <template v-slot:item.actions="{ item }">
                             <v-icon color="red" @click="removeEditionChoiceFromSubscription(item)">mdi-delete</v-icon>
                         </template>
@@ -244,7 +252,46 @@
                     <v-spacer></v-spacer>
                     <v-btn color="blue darken-1" text @click="packageDialog = false">Annuleren</v-btn>
                     <v-btn color="blue darken-1" text @click="addPackagesToSubscription"
-                        :disabled="!isPackagesFormValid || isAddingPackages || loadingPackages">Opslaan</v-btn>
+                        :disabled="isAddingPackages || loadingPackages">Opslaan</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="durationDialog" max-width="600px">
+            <v-card>
+                <v-card-title>
+                    <span class="headline">Looptijden toevoegen aan abonnement</span>
+                </v-card-title>
+                <v-card-text>
+                    <v-progress-linear v-if="loadingDurations || isAddingDurations" indeterminate color="blue"
+                        class="mb-3"></v-progress-linear>
+
+                    <v-combobox v-if="!loadingDurations" v-model="selectedDurations" :items="availableDurations"
+                        item-value="id" item-title="amount_of_months" label="Voeg looptijden toe" multiple chips
+                        clearable :disabled="loadingDurations"
+                        @update:model-value="onDurationSelectionChange"></v-combobox>
+
+                    <v-btn v-if="!loadingDurations" color="primary" @click="addSelectedDurationsToTable"
+                        :disabled="selectedDurations.length === 0">
+                        Toevoegen
+                    </v-btn>
+
+                    <v-data-table v-if="!loadingDurations" :headers="addedDurationsTableHeaders" :items="addedDurations"
+                        item-value="id" class="mt-3">
+                        <template v-slot:item.actions="{ item }">
+                            <v-icon color="red" @click="removeDurationFromSubscription(item)">mdi-delete</v-icon>
+                        </template>
+                    </v-data-table>
+
+                    <v-alert v-if="loadingDurations" class="mt-3">
+                        Laden van beschikbare looptijden...
+                    </v-alert>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="blue darken-1" text @click="durationDialog = false">Annuleren</v-btn>
+                    <v-btn color="blue darken-1" text @click="addDurationsToSubscription"
+                        :disabled="isAddingDurations || loadingDurations">Opslaan</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -296,6 +343,9 @@
                 <v-card-title>
                     <span class="headline">Weet u zeker dat u het abonnement wilt verwijderen?</span>
                 </v-card-title>
+                <v-card-text>
+                    <v-progress-linear v-if="loadingDialog" indeterminate color="blue" class="mb-3"></v-progress-linear>
+                </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn color="blue darken-1" text @click="cancelDelete">Annuleer</v-btn>
@@ -313,8 +363,30 @@
     </v-app>
 </template>
 <script setup>
-import axios from 'axios';
 import { ref, computed, onMounted } from 'vue';
+import { useSubscriptionStore } from '../stores/subscription.module';
+import { useAdditionalMagazineGroupStore } from '../stores/additional-magazine-group.module';
+import { usePackageStore } from '../stores/package.module';
+import { useDurationStore } from '../stores/duration.module';
+import { useGiftStore } from '../stores/gift.module';
+import { useSimpleEditionChoiceStore } from '../stores/simple-edition-choice.module';
+import { useSubscriptionAddOnStore } from '../stores/subscription-add-on.module';
+import { useSubscriptionSimpleEditionChoiceStore } from '../stores/subscription-simple-edition-choice.store';
+import { useSubscriptionPackageStore } from '../stores/subscription-package.module';
+import { useSubscriptionGiftStore } from '../stores/subscription-gift.module';
+import { useSubscriptionDurationStore } from '../stores/subscription-duration.module';
+
+const subscriptionStore = useSubscriptionStore();
+const additionalMagazineGroupStore = useAdditionalMagazineGroupStore();
+const subscriptionAddOnStore = useSubscriptionAddOnStore();
+const packageStore = usePackageStore();
+const durationStore = useDurationStore();
+const giftStore = useGiftStore();
+const simpleEditionChoiceStore = useSimpleEditionChoiceStore();
+const subscriptionSimpleEditionChoiceStore = useSubscriptionSimpleEditionChoiceStore();
+const subscriptionPackageStore = useSubscriptionPackageStore();
+const subscriptionGiftStore = useSubscriptionGiftStore();
+const subscriptionDurationStore = useSubscriptionDurationStore();
 
 const subscriptionDialog = ref(false);
 const isEditMode = ref(false);
@@ -329,6 +401,7 @@ const loadingDigitalAddOns = ref(false);
 const loadingPaperAddOns = ref(false);
 const loadingEditionChoices = ref(false);
 const loadingPackages = ref(false);
+const loadingDurations = ref(false);
 const loadingGifts = ref(false);
 const sortBy = ref([{ key: 'id', order: 'asc' }]);
 const valid = ref(false);
@@ -343,6 +416,9 @@ const subscriptionToDelete = ref(null);
 const addedPackages = ref([]);
 const addedEditionChoices = ref([]);
 const addedGifts = ref([]);
+const addedDurations = ref([]);
+const search = ref('');
+const timeout = ref(null);
 
 const availableAdditionalMagazineGroups = ref([]);
 const selectedAdditionalMagazineGroup = ref([]);
@@ -354,19 +430,21 @@ const isAddingAdditionalMagazineGroups = ref(false);
 const availableEditionChoices = ref([]);
 const selectedEditionChoices = ref([]);
 const editionChoiceDialog = ref(false);
-const selectedEditionChoicesInitial = ref([]);
 const isAddingEditionChoices = ref(false);
 
 const availablePackages = ref([]);
 const selectedPackages = ref([]);
 const packageDialog = ref(false);
-const selectedPackagesInitial = ref([]);
 const isAddingPackages = ref(false);
+
+const availableDurations = ref([]);
+const selectedDurations = ref([]);
+const durationDialog = ref(false);
+const isAddingDurations = ref(false);
 
 const availableGifts = ref([]);
 const selectedGifts = ref([]);
 const giftDialog = ref(false);
-const selectedGiftsInitial = ref([]);
 const isAddingGifts = ref(false);
 
 const availableDigitalAddOns = ref([]);
@@ -400,10 +478,18 @@ const addedPackagesTableHeaders = ref([
     { title: "Acties", value: "actions", sortable: false },
 ]);
 
+const addedDurationsTableHeaders = ref([
+    { title: "Id", value: "id" },
+    { title: "Aantal maanden", value: "amount_of_months" },
+    { title: "Promotie bericht", value: "promotion_message" },
+    { title: "Acties", value: "actions", sortable: false },
+]);
+
 const addedGiftsTableHeaders = ref([
     { title: "Id", value: "id" },
     { title: "Naam", value: "name" },
-    { title: "Extra prijs", value: "additional_price" },
+    { title: "Geldig bij (maanden)", value: "valid_after_months" },
+    { title: "Afbeelding", value: "image_url" },
     { title: "Acties", value: "actions", sortable: false },
 ]);
 
@@ -436,6 +522,13 @@ const hideSnackbar = () => {
     snackbar.value = false;
 };
 
+const userInput = () => {
+    clearTimeout(timeout.value);
+    timeout.value = setTimeout(() => {
+        getSubscriptions();
+    }, 500);
+}
+
 const isFormValid = computed(() => {
     return subscription.value.type && subscription.value.company;
 });
@@ -452,24 +545,6 @@ const isPaperAddOnsFormValid = computed(() => {
     return JSON.stringify(selectedPaperAddOn.value) !== JSON.stringify(selectedPaperAddOnInitial.value);
 });
 
-const isEditionChoicesFormValid = computed(() => {
-    const selectedEditionChoicesSet = new Set(selectedEditionChoices.value);
-    const initialEditionChoicesSet = new Set(selectedEditionChoicesInitial.value);
-
-    return selectedEditionChoicesSet.size !== initialEditionChoicesSet.size ||
-        [...selectedEditionChoicesSet].some(editionChoice => !initialEditionChoicesSet.has(editionChoice)) ||
-        [...initialEditionChoicesSet].some(editionChoice => !selectedEditionChoicesSet.has(editionChoice));
-});
-
-const isPackagesFormValid = computed(() => {
-    const selectedPackagesSet = new Set(selectedPackages.value);
-    const initialPackagesSet = new Set(selectedPackagesInitial.value);
-
-    return selectedPackagesSet.size !== initialPackagesSet.size ||
-        [...selectedPackagesSet].some(subscriptionPackage => !initialPackagesSet.has(subscriptionPackage)) ||
-        [...initialPackagesSet].some(subscriptionPackage => !selectedPackagesSet.has(subscriptionPackage));
-});
-
 const addSelectedPackagesToTable = () => {
     addedPackages.value = addedPackages.value.concat(selectedPackages.value);
 
@@ -478,6 +553,16 @@ const addSelectedPackagesToTable = () => {
     );
 
     selectedPackages.value = [];
+};
+
+const addSelectedDurationsToTable = () => {
+    addedDurations.value = addedDurations.value.concat(selectedDurations.value);
+
+    availableDurations.value = availableDurations.value.filter(
+        (duration) => !selectedDurations.value.includes(duration)
+    );
+
+    selectedDurations.value = [];
 };
 
 const addSelectedEditionChoicesToTable = () => {
@@ -510,38 +595,37 @@ const getSubscriptions = async () => {
         sort_dir: sortBy.value[0].order,
     };
 
-    axios.get('/api/subscriptions', { params })
-        .then(response => {
-            tableRows.value = response.data.data;
-            totalItems.value = response.data.meta.pagination.total;
-        })
-        .catch(error => {
-            showSnackbar("Niet gelukt om abonnementen op te halen.", "error");
-        })
-        .finally(() => {
-            loadingSubscriptionsDataTable.value = false;
-        });
+    if (search.value) {
+        params.query = search.value;
+    };
+
+    try {
+        subscriptionStore.subscriptionData = await subscriptionStore.getSubscriptions(params);
+        tableRows.value = subscriptionStore.subscriptionData.data;
+        totalItems.value = subscriptionStore.subscriptionData.meta.pagination.total;
+    } catch (error) {
+        showSnackbar("Niet gelukt om abonnementen op te halen.", "error");
+    } finally {
+        loadingSubscriptionsDataTable.value = false;
+    }
 }
 
-const createSubscription = () => {
+const createSubscription = async () => {
     if (valid.value) {
         loadingDialog.value = true;
 
-        console.log(subscription.value);
+        try {
+            await subscriptionStore.createSubscription(subscription.value);
+            showSnackbar("Abonnement succesvol aangemakaakt!", "success");
+            getSubscriptions();
+            resetSubscription();
+        } catch (error) {
+            showSnackbar("Niet gelukt om abonnement aan te maken.", "error");
+        } finally {
+            loadingDialog.value = false;
+            subscriptionDialog.value = false;
+        }
 
-        axios.post('/api/subscriptions', subscription.value)
-            .then(response => {
-                showSnackbar("Abonnement succesvol aangemakaakt!", "success");
-                getSubscriptions();
-                subscriptionDialog.value = false;
-                resetSubscription();
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om abonnement aan te maken.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-            });
     } else {
         showSnackbar("Onjuiste invoer.", "error");
     };
@@ -551,19 +635,17 @@ const updateSubscription = async () => {
     if (valid.value) {
         loadingDialog.value = true;
 
-        axios.put(`/api/subscriptions/${subscription.value.id}`, subscription.value)
-            .then(response => {
-                showSnackbar("Abonnement succesvol aangepast!", "success");
-                getSubscriptions();
-                subscriptionDialog.value = false;
-                resetSubscription();
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om abonnement te bewerken.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-            })
+        try {
+            await subscriptionStore.updateSubscription(subscription.value.id, subscription.value);
+            showSnackbar("Abonnement succesvol aangepast!", "success");
+            getSubscriptions();
+            resetSubscription();
+        } catch (error) {
+            showSnackbar("Niet gelukt om abonnement te bewerken.", "error");
+        } finally {
+            loadingDialog.value = false;
+            subscriptionDialog.value = false;
+        }
     } else {
         showSnackbar("Onjuiste invoer.", "error");
     }
@@ -573,17 +655,16 @@ const removeSubscription = async (subscription) => {
     if (subscription) {
         loadingDialog.value = true;
 
-        axios.delete(`/api/subscriptions/${subscription.id}`)
-            .then(response => {
-                getSubscriptions();
-                showSnackbar("Abonnement succesvol verwijderd!", "success");
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om abonnement te verwijderen.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-            });
+        try {
+            await subscriptionStore.deleteSubscription(subscription.id);
+            showSnackbar("Abonnement succesvol verwijderd!", "success");
+            getSubscriptions();
+        } catch (error) {
+            showSnackbar("Niet gelukt om abonnement te verwijderen.", "error");
+        } finally {
+            loadingDialog.value = false;
+            deleteSubscriptionDialog.value = false;
+        }
     }
 };
 
@@ -593,7 +674,7 @@ const addEditionChoicesToSubscription = async () => {
     try {
         const editionChoiceIds = addedEditionChoices.value.map(choice => choice.id);
 
-        await axios.put(`/api/subscriptions/${currentSubscription.value.id}`, {
+        await subscriptionStore.updateSubscription(currentSubscription.value.id, {
             simple_edition_choice_ids: editionChoiceIds,
         });
 
@@ -612,7 +693,9 @@ const addAdditionalMagazineGroupToSubscription = async () => {
     isAddingAdditionalMagazineGroups.value = true;
 
     try {
-        const response = await axios.put(`/api/subscriptions/${currentSubscription.value.id}`, { additional_magazine_group_id: groupId });
+        await subscriptionStore.updateSubscription(currentSubscription.value.id, {
+            additional_magazine_group_id: groupId,
+        });
 
         showSnackbar("Aanvullende tijdschrift groep succesvol bijgewerkt!", "success");
         additionalMagazineGroupDialog.value = false;
@@ -629,7 +712,9 @@ const addDigitalAddOnToSubscription = async () => {
     isAddingDigitalAddOns.value = true;
 
     try {
-        const response = await axios.put(`/api/subscriptions/${currentSubscription.value.id}`, { digital_add_on_id: digitalAddOnId });
+        await subscriptionStore.updateSubscription(currentSubscription.value.id, {
+            digital_add_on_id: digitalAddOnId,
+        });
 
         showSnackbar("Digitale add-on succesvol bijgewerkt!", "success");
         digitalAddOnDialog.value = false;
@@ -646,7 +731,9 @@ const addPaperAddOnToSubscription = async () => {
     isAddingPaperAddOns.value = true;
 
     try {
-        const response = await axios.put(`/api/subscriptions/${currentSubscription.value.id}`, { paper_add_on_id: paperAddOnId });
+        await subscriptionStore.updateSubscription(currentSubscription.value.id, {
+            paper_add_on_id: paperAddOnId,
+        });
 
         showSnackbar("Papieren add-on succesvol bijgewerkt!", "success");
         paperAddOnDialog.value = false;
@@ -663,7 +750,7 @@ const addPackagesToSubscription = async () => {
     try {
         const packageIds = addedPackages.value.map(pkg => pkg.id);
 
-        await axios.put(`/api/subscriptions/${currentSubscription.value.id}`, {
+        await subscriptionStore.updateSubscription(currentSubscription.value.id, {
             package_ids: packageIds,
         });
 
@@ -676,13 +763,32 @@ const addPackagesToSubscription = async () => {
     }
 };
 
+const addDurationsToSubscription = async () => {
+    isAddingDurations.value = true;
+
+    try {
+        const durationIds = addedDurations.value.map(duration => duration.id);
+
+        await subscriptionStore.updateSubscription(currentSubscription.value.id, {
+            duration_ids: durationIds,
+        });
+
+        showSnackbar("Looptijden succesvol bijgewerkt!", "success");
+        durationDialog.value = false;
+    } catch (error) {
+        showSnackbar("Fout bij het bijwerken van looptijden.", "error");
+    } finally {
+        isAddingDurations.value = false;
+    }
+};
+
 const addGiftsToSubscription = async () => {
     isAddingGifts.value = true;
 
     try {
         const giftIds = addedGifts.value.map(gift => gift.id);
 
-        await axios.put(`/api/subscriptions/${currentSubscription.value.id}`, {
+        await subscriptionStore.updateSubscription(currentSubscription.value.id, {
             gift_ids: giftIds,
         });
 
@@ -698,12 +804,13 @@ const addGiftsToSubscription = async () => {
 const getAdditionalMagazineGroupForSubscription = async (subscriptionId) => {
     try {
         loadingAdditionalMagazineGroups.value = true;
-        const response = await axios.get('/api/additional-magazine-groups');
-        availableAdditionalMagazineGroups.value = response.data.data;
 
-        const subscriptionByIdResponse = await axios.get(`/api/subscriptions/${subscriptionId}`);
+        additionalMagazineGroupStore.additionalMagazineGroupData = await additionalMagazineGroupStore.getAdditionalMagazineGroups();
+        availableAdditionalMagazineGroups.value = additionalMagazineGroupStore.additionalMagazineGroupData.data;
 
-        const additionalMagazineGroupId = subscriptionByIdResponse.data.data.additional_magazine_group_id;
+        const subscriptionByIdResponse = await subscriptionStore.getSubscription(subscriptionId);
+
+        const additionalMagazineGroupId = subscriptionByIdResponse.additional_magazine_group_id;
 
         if (additionalMagazineGroupId) {
             selectedAdditionalMagazineGroup.value = [additionalMagazineGroupId]
@@ -723,12 +830,13 @@ const getAdditionalMagazineGroupForSubscription = async (subscriptionId) => {
 const getDigitalAddOnForSubscription = async (subscriptionId) => {
     try {
         loadingDigitalAddOns.value = true;
-        const response = await axios.get(`/api/subscription-add-ons`);
-        availableDigitalAddOns.value = response.data.data;
 
-        const subscriptionByIdResponse = await axios.get(`/api/subscriptions/${subscriptionId}`);
+        subscriptionAddOnStore.subscriptionAddOnData = await subscriptionAddOnStore.getSubscriptionAddOns();
+        availableDigitalAddOns.value = subscriptionAddOnStore.subscriptionAddOnData.data;
 
-        const digitalAddOnId = subscriptionByIdResponse.data.data.digital_add_on_id;
+        const subscriptionByIdResponse = await subscriptionStore.getSubscription(subscriptionId);
+
+        const digitalAddOnId = subscriptionByIdResponse.digital_add_on_id;
 
         if (digitalAddOnId) {
             selectedDigitalAddOn.value = [digitalAddOnId];
@@ -747,12 +855,13 @@ const getDigitalAddOnForSubscription = async (subscriptionId) => {
 const getPaperAddOnForSubscription = async (subscriptionId) => {
     try {
         loadingPaperAddOns.value = true;
-        const response = await axios.get(`/api/subscription-add-ons`);
-        availablePaperAddOns.value = response.data.data;
 
-        const subscriptionByIdResponse = await axios.get(`/api/subscriptions/${subscriptionId}`);
+        subscriptionAddOnStore.subscriptionAddOnData = await subscriptionAddOnStore.getSubscriptionAddOns();
+        availablePaperAddOns.value = subscriptionAddOnStore.subscriptionAddOnData.data;
 
-        const paperAddOnId = subscriptionByIdResponse.data.data.paper_add_on_id;
+        const subscriptionByIdResponse = await subscriptionStore.getSubscription(subscriptionId);
+
+        const paperAddOnId = subscriptionByIdResponse.paper_add_on_id;
 
         if (paperAddOnId) {
             selectedPaperAddOn.value = [paperAddOnId];
@@ -772,12 +881,11 @@ const getEditionChoicesForSubscription = async (subscriptionId) => {
     try {
         loadingEditionChoices.value = true;
 
-        const editionChoicesResponse = await axios.get('/api/simple-edition-choices');
-        availableEditionChoices.value = editionChoicesResponse.data.data;
+        simpleEditionChoiceStore.simpleEditionChoiceData = await simpleEditionChoiceStore.getSimpleEditionChoices();
+        availableEditionChoices.value = simpleEditionChoiceStore.simpleEditionChoiceData.data;
 
-        const subscriptionEditionChoicesResponse = await axios.get(`/api/subscriptions/${subscriptionId}/simple-edition-choices`);
-        console.log(subscriptionEditionChoicesResponse);
-        addedEditionChoices.value = subscriptionEditionChoicesResponse.data;
+        subscriptionSimpleEditionChoiceStore.subscriptionSimpleEditionChoiceData = await subscriptionSimpleEditionChoiceStore.getSimpleEditionChoicesForSubscription(subscriptionId);
+        addedEditionChoices.value = subscriptionSimpleEditionChoiceStore.subscriptionSimpleEditionChoiceData;
 
         availableEditionChoices.value = availableEditionChoices.value.filter(
             choice => !addedEditionChoices.value.some(added => added.id === choice.id)
@@ -793,11 +901,11 @@ const getPackagesForSubscription = async (subscriptionId) => {
     try {
         loadingPackages.value = true;
 
-        const packagesResponse = await axios.get('/api/packages');
-        availablePackages.value = packagesResponse.data.data;
+        packageStore.packageData = await packageStore.getPackages();
+        availablePackages.value = packageStore.packageData.data;
 
-        const subscriptionPackagesResponse = await axios.get(`/api/subscriptions/${subscriptionId}/packages`);
-        addedPackages.value = subscriptionPackagesResponse.data;
+        subscriptionPackageStore.subscriptionPackageData = await subscriptionPackageStore.getPackagesForSubscription(subscriptionId);
+        addedPackages.value = subscriptionPackageStore.subscriptionPackageData;
 
         availablePackages.value = availablePackages.value.filter(
             pkg => !addedPackages.value.some(added => added.id === pkg.id)
@@ -813,11 +921,11 @@ const getGiftsForSubscription = async (subscriptionId) => {
     try {
         loadingGifts.value = true;
 
-        const giftsResponse = await axios.get('/api/gifts');
-        availableGifts.value = giftsResponse.data.data;
+        giftStore.giftData = await giftStore.getGifts();
+        availableGifts.value = giftStore.giftData.data;
 
-        const subscriptionGiftsResponse = await axios.get(`/api/subscriptions/${subscriptionId}/gifts`);
-        addedGifts.value = subscriptionGiftsResponse.data;
+        subscriptionGiftStore.subscriptionGiftData = await subscriptionGiftStore.getGiftsForSubscription(subscriptionId);
+        addedGifts.value = subscriptionGiftStore.subscriptionGiftData;
 
         availableGifts.value = availableGifts.value.filter(
             gift => !addedGifts.value.some(added => added.id === gift.id)
@@ -828,6 +936,26 @@ const getGiftsForSubscription = async (subscriptionId) => {
         loadingGifts.value = false;
     }
 };
+
+const getDurationsForSubscription = async (subscriptionId) => {
+    try {
+        loadingDurations.value = true;
+
+        durationStore.durationData = await durationStore.getDurations();
+        availableDurations.value = durationStore.durationData.data;
+
+        subscriptionDurationStore.subscriptionDurationData = await subscriptionDurationStore.getDurationsForSubscription(subscriptionId);
+        addedDurations.value = subscriptionDurationStore.subscriptionDurationData;
+
+        availableDurations.value = availableDurations.value.filter(
+            duration => !addedDurations.value.some(added => added.id === duration.id)
+        );
+    } catch (error) {
+        showSnackbar("Fout bij het ophalen van looptijden.", "error");
+    } finally {
+        loadingDurations.value = false;
+    }
+}
 
 const onPackageSelectionChange = () => {
     availablePackages.value = availablePackages.value.filter(
@@ -840,6 +968,18 @@ const onPackageSelectionChange = () => {
 
     console.log(newSelectedPackages);
 };
+
+const onDurationSelectionChange = () => {
+    availableDurations.value = availableDurations.value.filter(
+        duration => !selectedDurations.value.includes(duration.id)
+    );
+
+    const newSelectedDurations = selectedDurations.value.filter(
+        selectedDuration => !addedDurations.value.some(added => added.id === selectedDuration.id)
+    );
+
+    console.log(newSelectedDurations);
+}
 
 const onEditionChoiceSelectionChange = () => {
     availableEditionChoices.value = availableEditionChoices.value.filter(
@@ -883,6 +1023,12 @@ const removeGiftFromSubscription = (gift) => {
     availableGifts.value.push(gift);
 };
 
+const removeDurationFromSubscription = (duration) => {
+    addedDurations.value = addedDurations.value.filter(addedDuration => addedDuration.id !== duration.id);
+
+    availableDurations.value.push(duration);
+}
+
 const showAddAdditionalMagazineGroupDialog = (subscription) => {
     currentSubscription.value = subscription;
     selectedAdditionalMagazineGroup.value = null;
@@ -903,6 +1049,13 @@ const showAddPackagesDialog = (subscription) => {
     packageDialog.value = true;
     getPackagesForSubscription(subscription.id);
 };
+
+const showAddDurationsDialog = (subscription) => {
+    currentSubscription.value = subscription;
+    selectedDurations.value = [];
+    durationDialog.value = true;
+    getDurationsForSubscription(subscription.id);
+}
 
 const showAddGiftsDialog = (subscription) => {
     currentSubscription.value = subscription;
@@ -937,8 +1090,7 @@ const cancelDelete = () => {
 
 const confirmDelete = () => {
     removeSubscription(subscriptionToDelete.value);
-    deleteSubscriptionDialog.value = false;
-}
+};
 
 const showCreateSubscriptionDialog = () => {
     isEditMode.value = false;

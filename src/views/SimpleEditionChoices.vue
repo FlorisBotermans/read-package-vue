@@ -1,6 +1,6 @@
 <template>
     <v-app>
-        <v-card>
+        <v-card class="ma-4">
             <v-card-title>
                 <v-text-field v-model="search" label="Zoeken" @input="userInput"></v-text-field>
                 <v-spacer></v-spacer>
@@ -10,9 +10,22 @@
                 :sort-by="sortBy.key" :sort-desc="sortBy.order"
                 :items-length="totalItems" :loading="loadingDataTable"
                 @update:options="updateOptions">
+                <template v-slot:item.additional_price="{ item }">
+                    €{{ parseFloat(item.additional_price).toFixed(2) }}
+                </template>
                 <template v-slot:item.actions="{ item }">
-                    <v-icon color="warning" @click="showEditSimpleEditionChoiceDialog(item)">mdi-pencil</v-icon>
-                    <v-icon color="red" @click="showRemoveSimpleEditionChoiceDialog(item)">mdi-delete</v-icon>
+                    <v-row dense>
+                        <v-col cols="auto">
+                            <v-btn text color="warning" @click="showEditSimpleEditionChoiceDialog(item)">
+                                Bewerken
+                            </v-btn>
+                        </v-col>
+                        <v-col cols="auto">
+                            <v-btn text color="red" @click="showRemoveSimpleEditionChoiceDialog(item)">
+                                Verwijder
+                            </v-btn>
+                        </v-col>
+                    </v-row>
                 </template>
             </v-data-table-server>
         </v-card>
@@ -67,9 +80,10 @@
     </v-app>
 </template>
 <script setup>
-import axios from 'axios';
 import { ref, computed, onMounted } from 'vue';
+import { useSimpleEditionChoiceStore } from '../stores/simple-edition-choice.module';
 
+const simpleEditionChoiceStore = useSimpleEditionChoiceStore();
 const simpleEditionChoiceDialog = ref(false);
 const isEditMode = ref(false);
 const totalItems = ref(0);
@@ -135,36 +149,32 @@ const getSimpleEditionChoices = async () => {
         params.query = search.value;
     };
 
-    axios.get('/api/simple-edition-choices', { params })
-        .then(response => {
-            tableRows.value = response.data.data;
-            totalItems.value = response.data.meta.pagination.total;
-        })
-        .catch(error => {
-            showSnackbar("Niet gelukt om simpele editie keuzes op te halen.", "error");
-        })
-        .finally(() => {
-            loadingDataTable.value = false;
-        });
+    try {
+        simpleEditionChoiceStore.simpleEditionChoiceData = await simpleEditionChoiceStore.getSimpleEditionChoices(params);
+        tableRows.value = simpleEditionChoiceStore.simpleEditionChoiceData.data;
+        totalItems.value = simpleEditionChoiceStore.simpleEditionChoiceData.meta.pagination.total;
+    } catch (error) {
+        showSnackbar("Niet gelukt om simpele editie keuzes op te halen.", "error");
+    } finally {
+        loadingDataTable.value = false;
+    }
 }
 
-const createSimpleEditionChoice = () => {
+const createSimpleEditionChoice = async () => {
     if (valid.value) {
         loadingDialog.value = true;
 
-        axios.post('/api/simple-edition-choices', simpleEditionChoice.value)
-            .then(response => {
-                showSnackbar("Simpele editie keuze succesvol aangemakaakt!", "success");
-                getSimpleEditionChoices();
-                resetSimpleEditionChoice();
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om simpele editie keuze aan te maken.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-                simpleEditionChoiceDialog.value = false;
-            });
+        try {
+            await simpleEditionChoiceStore.createSimpleEditionChoice(simpleEditionChoice.value);
+            showSnackbar("Simpele editie keuze succesvol aangemakaakt!", "success");
+            getSimpleEditionChoices();
+            resetSimpleEditionChoice();
+        } catch (error) {
+            showSnackbar("Niet gelukt om simpele editie keuze aan te maken.", "error");
+        } finally {
+            loadingDialog.value = false;
+            simpleEditionChoiceDialog.value = false;
+        }
     } else {
         showSnackbar("Onjuiste invoer.", "error");
     };
@@ -174,19 +184,17 @@ const updateSimpleEditionChoice = async () => {
     if (valid.value) {
         loadingDialog.value = true;
 
-        axios.put(`/api/simple-edition-choices/${simpleEditionChoice.value.id}`, simpleEditionChoice.value)
-            .then(response => {
-                showSnackbar("Simpele editie keuze succesvol aangepast!", "success");
-                getSimpleEditionChoices();
-                resetSimpleEditionChoice();
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om simpele editie keuze te bewerken.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-                simpleEditionChoiceDialog.value = false;
-            })
+        try {
+            await simpleEditionChoiceStore.updateSimpleEditionChoice(simpleEditionChoice.value.id, simpleEditionChoice.value);
+            showSnackbar("Simpele editie keuze succesvol aangepast!", "success");
+            getSimpleEditionChoices();
+            resetSimpleEditionChoice();
+        } catch (error) {
+            showSnackbar("Niet gelukt om simpele editie keuze te bewerken.", "error");
+        } finally {
+            loadingDialog.value = false;
+            simpleEditionChoiceDialog.value = false;
+        }
     } else {
         showSnackbar("Onjuiste invoer.", "error");
     }
@@ -196,18 +204,16 @@ const removeSimpleEditionChoice = async (simpleEditionChoice) => {
     if (simpleEditionChoice) {
         loadingDialog.value = true;
 
-        axios.delete(`/api/simple-edition-choices/${simpleEditionChoice.id}`)
-            .then(response => {
-                getSimpleEditionChoices();
-                showSnackbar("Simpele editie keuze succesvol verwijderd!", "success");
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om simpele editie keuze te verwijderen.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-                deleteSimpleEditionChoiceDialog.value = false;
-            });
+        try {
+            await simpleEditionChoiceStore.deleteSimpleEditionChoice(simpleEditionChoice.id);
+            showSnackbar("Simpele editie keuze succesvol verwijderd!", "success");
+            getSimpleEditionChoices();
+        } catch (error) {
+            showSnackbar("Niet gelukt om simpele editie keuze te verwijderen.", "error");
+        } finally {
+            loadingDialog.value = false;
+            deleteSimpleEditionChoiceDialog.value = false;
+        }
     }
 };
 

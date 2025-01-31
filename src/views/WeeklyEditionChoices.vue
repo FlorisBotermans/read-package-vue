@@ -1,6 +1,6 @@
 <template>
     <v-app>
-        <v-card>
+        <v-card class="ma-4">
             <v-card-title>
                 <v-text-field v-model="search" label="Zoeken" @input="userInput"></v-text-field>
                 <v-spacer></v-spacer>
@@ -10,12 +10,25 @@
             <v-data-table-server :headers="headers" :items="tableRows" :items-per-page="itemsPerPage"
                 :sort-by="sortBy.key" :sort-desc="sortBy.order" :items-length="totalItems" :loading="loadingDataTable"
                 @update:options="updateOptions">
+                <template v-slot:item.week_price="{ item }">
+                    €{{ parseFloat(item.week_price).toFixed(2) }}
+                </template>
                 <template v-slot:item.available="{ item }">
                     {{ item.available ? 'Ja' : 'Nee' }}
                 </template>
                 <template v-slot:item.actions="{ item }">
-                    <v-icon color="warning" @click="showEditWeeklyEditionChoiceDialog(item)">mdi-pencil</v-icon>
-                    <v-icon color="red" @click="showRemoveWeeklyEditionChoiceDialog(item)">mdi-delete</v-icon>
+                    <v-row dense>
+                        <v-col cols="auto">
+                            <v-btn text color="warning" @click="showEditWeeklyEditionChoiceDialog(item)">
+                                Bewerken
+                            </v-btn>
+                        </v-col>
+                        <v-col cols="auto">
+                            <v-btn text color="red" @click="showRemoveWeeklyEditionChoiceDialog(item)">
+                                Verwijder
+                            </v-btn>
+                        </v-col>
+                    </v-row>
                 </template>
             </v-data-table-server>
         </v-card>
@@ -74,9 +87,10 @@
     </v-app>
 </template>
 <script setup>
-import axios from 'axios';
 import { ref, computed, onMounted } from 'vue';
+import { useWeeklyEditionChoiceStore } from '../stores/weekly-edition-choice.module';
 
+const weeklyEditionChoiceStore = useWeeklyEditionChoiceStore();
 const weeklyEditionChoiceDialog = ref(false);
 const isEditMode = ref(false);
 const totalItems = ref(0);
@@ -128,7 +142,7 @@ const userInput = () => {
     timeout.value = setTimeout(() => {
         getWeeklyEditionChoices();
     }, 500);
-}
+};
 
 const getWeeklyEditionChoices = async () => {
     loadingDataTable.value = true;
@@ -144,36 +158,32 @@ const getWeeklyEditionChoices = async () => {
         params.query = search.value;
     };
 
-    axios.get('/api/weekly-edition-choices', { params })
-        .then(response => {
-            tableRows.value = response.data.data;
-            totalItems.value = response.data.meta.pagination.total;
-        })
-        .catch(error => {
-            showSnackbar("Niet gelukt om wekelijkse editie keuzes op te halen.", "error");
-        })
-        .finally(() => {
-            loadingDataTable.value = false;
-        });
-}
+    try {
+        weeklyEditionChoiceStore.weeklyEditionChoiceData = await weeklyEditionChoiceStore.getWeeklyEditionChoices(params);
+        tableRows.value = weeklyEditionChoiceStore.weeklyEditionChoiceData.data;
+        totalItems.value = weeklyEditionChoiceStore.weeklyEditionChoiceData.meta.pagination.total;
+    } catch (error) {
+        showSnackbar("Niet gelukt om wekelijkse editie keuzes op te halen.", "error");
+    } finally {
+        loadingDataTable.value = false;
+    }
+};
 
-const createWeeklyEditionChoice = () => {
+const createWeeklyEditionChoice = async () => {
     if (valid.value) {
         loadingDialog.value = true;
 
-        axios.post('/api/weekly-edition-choices', weeklyEditionChoice.value)
-            .then(response => {
-                showSnackbar("Wekelijkse editie keuze succesvol aangemakaakt!", "success");
-                getWeeklyEditionChoices();
-                resetWeeklyEditionChoice();
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om wekelijkse editie keuze aan te maken.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-                weeklyEditionChoiceDialog.value = false;
-            });
+        try {
+            await weeklyEditionChoiceStore.createWeeklyEditionChoice(weeklyEditionChoice.value);
+            showSnackbar("Wekelijkse editie keuze succesvol aangemakaakt!", "success");
+            getWeeklyEditionChoices();
+            resetWeeklyEditionChoice();
+        } catch (error) {
+            showSnackbar("Niet gelukt om wekelijkse editie keuze aan te maken.", "error");
+        } finally {
+            loadingDialog.value = false;
+            weeklyEditionChoiceDialog.value = false;
+        }
     } else {
         showSnackbar("Onjuiste invoer.", "error");
     };
@@ -183,19 +193,17 @@ const updateWeeklyEditionChoice = async () => {
     if (valid.value) {
         loadingDialog.value = true;
 
-        axios.put(`/api/weekly-edition-choices/${weeklyEditionChoice.value.id}`, weeklyEditionChoice.value)
-            .then(response => {
-                showSnackbar("Wekelijkse editie keuze succesvol aangepast!", "success");
-                getWeeklyEditionChoices();
-                resetWeeklyEditionChoice();
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om wekelijkse editie keuze te bewerken.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-                weeklyEditionChoiceDialog.value = false;
-            })
+        try {
+            await weeklyEditionChoiceStore.updateWeeklyEditionChoice(weeklyEditionChoice.value.id, weeklyEditionChoice.value);
+            showSnackbar("Wekelijkse editie keuze succesvol aangepast!", "success");
+            getWeeklyEditionChoices();
+            resetWeeklyEditionChoice();
+        } catch (error) {
+            showSnackbar("Niet gelukt om wekelijkse editie keuze te bewerken.", "error");
+        } finally {
+            loadingDialog.value = false;
+            weeklyEditionChoiceDialog.value = false;
+        }
     } else {
         showSnackbar("Onjuiste invoer.", "error");
     }
@@ -205,18 +213,16 @@ const removeWeeklyEditionChoice = async (weeklyEditionChoice) => {
     if (weeklyEditionChoice) {
         loadingDialog.value = true;
 
-        axios.delete(`/api/weekly-edition-choices/${weeklyEditionChoice.id}`)
-            .then(response => {
-                getWeeklyEditionChoices();
-                showSnackbar("Wekelijkse editie keuze succesvol verwijderd!", "success");
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om wekelijkse editie keuze te verwijderen.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-                deleteWeeklyEditionChoiceDialog.value = false;
-            });
+        try {
+            await weeklyEditionChoiceStore.deleteWeeklyEditionChoice(weeklyEditionChoice.id);
+            showSnackbar("Wekelijkse editie keuze succesvol verwijderd!", "success");
+            getWeeklyEditionChoices();
+        } catch (error) {
+            showSnackbar("Niet gelukt om wekelijkse editie keuze te verwijderen.", "error");
+        } finally {
+            loadingDialog.value = false;
+            deleteWeeklyEditionChoiceDialog.value = false;
+        }
     }
 };
 
@@ -242,7 +248,7 @@ const showRemoveWeeklyEditionChoiceDialog = (weeklyEditionChoice) => {
 
 const showEditWeeklyEditionChoiceDialog = (newWeeklyEditionChoice) => {
     isEditMode.value = true;
-    weeklyEditionChoice.value = { 
+    weeklyEditionChoice.value = {
         ...newWeeklyEditionChoice,
         available: !!newWeeklyEditionChoice.available,
     };

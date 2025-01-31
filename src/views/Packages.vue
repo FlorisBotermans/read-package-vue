@@ -1,18 +1,50 @@
 <template>
     <v-app>
-        <v-card>
+        <v-card class="ma-4">
             <v-card-title>
+                <v-text-field v-model="search" label="Zoeken" @input="userInput"></v-text-field>
+                <v-spacer></v-spacer>
                 <v-btn color="primary" @click="showCreatePackageDialog">Nieuw pakket</v-btn>
             </v-card-title>
             <v-data-table :headers="headers" :items="tableRows" :items-per-page="itemsPerPage" :sort-by="sortBy.key"
                 :sort-desc="sortBy.order" :server-items-length="totalItems" :loading="loadingDataTable"
                 @update:options="updateOptions">
+                <template v-slot:item.image_url="{ item }">
+                    <v-img max-width="50" :src="item.image_url"></v-img>
+                </template>
                 <template v-slot:item.actions="{ item }">
-                    <v-icon color="warning" @click="showEditPackageDialog(item)">mdi-pencil</v-icon>
-                    <v-icon color="red" @click="showRemovePackageDialog(item)">mdi-delete</v-icon>
-                    <v-btn color="primary" @click="showAddOptionsDialog(item)">Opties toevoegen</v-btn>
-                    <v-btn color="primary" @click="showAddMagazineGroupDialog(item)">Tijdschrift groep
-                        toevoegen</v-btn>
+                    <v-row dense>
+                        <v-col cols="auto">
+                            <v-btn text color="warning" @click="showEditPackageDialog(item)">
+                                Bewerken
+                            </v-btn>
+                        </v-col>
+                        <v-col cols="auto">
+                            <v-btn text color="red" @click="showRemovePackageDialog(item)">
+                                Verwijder
+                            </v-btn>
+                        </v-col>
+                        <v-col cols="auto">
+                            <v-menu>
+                                <template v-slot:activator="{ props }">
+                                    <v-btn color="primary" text v-bind="props" class="text-nowrap">
+                                        Meer acties
+                                    </v-btn>
+                                </template>
+                                <v-list>
+                                    <v-list-item @click="showAddOptionsDialog(item)">
+                                        <v-list-item-title>Opties toevoegen</v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item @click="showAddMagazineGroupDialog(item)">
+                                        <v-list-item-title>Tijdschriften groep toevoegen</v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item @click="showAddEditionChoicesDialog(item)">
+                                        <v-list-item-title>Editie keuzes toevoegen</v-list-item-title>
+                                    </v-list-item>
+                                </v-list>
+                            </v-menu>
+                        </v-col>
+                    </v-row>
                 </template>
             </v-data-table>
         </v-card>
@@ -29,23 +61,24 @@
                         <v-text-field v-model="pkg.name" label="Naam" required></v-text-field>
                         <v-text-field v-model="pkg.order" label="Volgorde" type="number" required min="0"
                             step="1"></v-text-field>
-                        <DOSpacesUploadComponent @uploaded="handleFileUploaded" :isUploading="isUploading"
-                            @upload-start="handleUploadStart" @upload-finish="handleUploadFinish"
-                            @file-removed="handleFileRemoved" @upload-error="handleUploadError"
-                            v-bind="isEditMode ? { file: gift.image_url } : {}" accepted="image/jpeg,image/png"
-                            msg="Upload hier de afbeelding (alleen jpeg en png) die hoort bij dit welkomscadeau (max 5 mb).)"
-                            extension="jpeg">
+                        <DOSpacesUploadComponent @uploaded="handleFileUploaded" @upload-start="handleUploadStart"
+                            @upload-finish="handleUploadFinish" @delete-start="handleStartDeleteFile"
+                            @file-deleted="handleFileDeleted" @upload-error="handleUploadError"
+                            @delete-error="handleRemoveFileError" v-bind="isEditMode ? { file: pkg.image_url } : {}"
+                            accepted="image/jpeg,image/png"
+                            msg="Upload hier de afbeelding (alleen jpeg en png) die hoort bij dit pakket (max 5 mb).)"
+                            extension="jpeg" folder="packages" :maxSize="5">
                         </DOSpacesUploadComponent>
 
-                        <v-progress-linear v-if="isUploading" indeterminate color="blue"
-                            class="mt-4"></v-progress-linear>
+                        <v-progress-linear v-if="isUploading || isRemovingFile" indeterminate color="blue"
+                            class="mb-3"></v-progress-linear>
                     </v-form>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn color="blue darken-1" text @click="pakketDialog = false">Annuleren</v-btn>
+                    <v-btn color="blue darken-1" text @click="packageDialog = false">Annuleren</v-btn>
                     <v-btn color="blue darken-1" text @click="isEditMode ? updatePackage() : createPackage()"
-                        :disabled="!isFormValid">Opslaan</v-btn>
+                        :disabled="!isFormValid || loadingDialog">Opslaan</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -56,11 +89,11 @@
                     <span class="headline">Opties toevoegen aan pakket</span>
                 </v-card-title>
                 <v-card-text>
-                    <v-progress-linear v-if="loadingOptions" indeterminate color="blue"
+                    <v-progress-linear v-if="loadingOptions || isAddingOptions" indeterminate color="blue"
                         class="mb-3"></v-progress-linear>
 
                     <v-combobox v-if="!loadingOptions" v-model="selectedOptions" :items="availableOptions"
-                        item-value="id" item-title="delivery_name" label="Voeg opties toe" multiple chips clearable
+                        item-value="id" :item-title="getOptionLabel" label="Voeg opties toe" multiple chips clearable
                         :disabled="loadingOptions" @update:model-value="onOptionSelectionChange"></v-combobox>
 
                     <v-btn v-if="!loadingOptions" color="primary" @click="addSelectedOptionsToTable"
@@ -70,11 +103,17 @@
 
                     <v-data-table v-if="!loadingOptions" :headers="addedOptionsTableHeaders" :items="addedOptions"
                         item-value="id" class="mt-3">
+                        <template v-slot:item.week_price="{ item }">
+                            €{{ parseFloat(item.week_price).toFixed(2) }}
+                        </template>
                         <template v-slot:item.actions="{ item }">
                             <v-icon color="red" @click="removeOptionFromPackage(item)">mdi-delete</v-icon>
                         </template>
                     </v-data-table>
 
+                    <v-alert v-if="loadingOptions" class="mt-3">
+                        Laden van beschikbare opties...
+                    </v-alert>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
@@ -104,21 +143,18 @@
                     <span class="headline">Tijdschrift groep toevoegen aan pakket</span>
                 </v-card-title>
                 <v-card-text>
-                    <v-progress-linear v-if="loadingMagazineGroups" indeterminate color="blue"
+                    <v-progress-linear v-if="loadingMagazineGroups || isAddingMagazineGroups" indeterminate color="blue"
                         class="mb-3"></v-progress-linear>
-                    <v-form v-model="validMagazineGroups"
-                        @submit.prevent="addMagazineGroupToPackage"
-                        v-if="!loadingMagazineGroups || isAddingMagazineGroups">
+                    <v-form v-model="validMagazineGroups" @submit.prevent="addMagazineGroupToPackage"
+                        v-if="!loadingMagazineGroups">
 
-                        <v-data-table-server :headers="magazineGroupHeaders"
-                            :items="availableMagazineGroups" :items-per-page="itemsPerPage"
-                            :items-length="totalItems" select-strategy="single" show-select
-                            v-model="selectedMagazineGroup" @update:options="updateOptions">
-                        </v-data-table-server>
+                        <v-data-table :headers="magazineGroupHeaders" :items="availableMagazineGroups"
+                            select-strategy="single" show-select v-model="selectedMagazineGroup">
+                        </v-data-table>
 
                     </v-form>
 
-                    <v-alert v-if="loadingMagazineGroups && !isAddingMagazineGroups" class="mt-3">
+                    <v-alert v-if="loadingMagazineGroups" class="mt-3">
                         Laden van beschikbare tijdschrift groepen...
                     </v-alert>
                 </v-card-text>
@@ -127,6 +163,51 @@
                     <v-btn color="blue darken-1" text @click="magazineGroupDialog = false">Annuleren</v-btn>
                     <v-btn color="blue darken-1" text @click="addMagazineGroupToPackage"
                         :disabled="!isMagazineGroupsFormValid || isAddingMagazineGroups || loadingMagazineGroups">Opslaan</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="editionChoiceDialog" max-width="600px">
+            <v-card>
+                <v-card-title>
+                    <span class="headline">Editie keuzes toevoegen aan pakket</span>
+                </v-card-title>
+                <v-card-text>
+                    <v-progress-linear v-if="loadingEditionChoices || isAddingEditionChoices" indeterminate color="blue"
+                        class="mb-3"></v-progress-linear>
+
+                    <v-combobox v-if="!loadingEditionChoices" v-model="selectedEditionChoices"
+                        :items="availableEditionChoices" item-value="id" :item-title="getEditionChoiceLabel"
+                        label="Voeg editie keuzes toe" multiple chips clearable :disabled="loadingEditionChoices"
+                        @update:model-value="onEditionChoiceSelectionChange"></v-combobox>
+
+                    <v-btn v-if="!loadingEditionChoices" color="primary" @click="addSelectedEditionChoicesToTable"
+                        :disabled="selectedEditionChoices.length === 0">
+                        Toevoegen
+                    </v-btn>
+
+                    <v-data-table v-if="!loadingEditionChoices" :headers="addedEditionChoicesTableHeaders"
+                        :items="addedEditionChoices" item-value="id" class="mt-3">
+                        <template v-slot:item.week_price="{ item }">
+                            €{{ parseFloat(item.week_price).toFixed(2) }}
+                        </template>
+                        <template v-slot:item.available="{ item }">
+                            <span>{{ item.available ? 'Ja' : 'Nee' }}</span>
+                        </template>
+                        <template v-slot:item.actions="{ item }">
+                            <v-icon color="red" @click="removeEditionChoiceFromPackage(item)">mdi-delete</v-icon>
+                        </template>
+                    </v-data-table>
+
+                    <v-alert v-if="loadingEditionChoices" class="mt-3">
+                        Laden van beschikbare editie keuzes...
+                    </v-alert>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="blue darken-1" text @click="editionChoiceDialog = false">Annuleren</v-btn>
+                    <v-btn color="blue darken-1" text @click="addEditionChoicesToPackage"
+                        :disabled="isAddingEditionChoices || loadingEditionChoices">Opslaan</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -141,9 +222,20 @@
 </template>
 <script setup>
 import DOSpacesUploadComponent from '@/components/DOSpacesUploadComponent.vue';
-import axios from 'axios';
 import { ref, computed, onMounted } from 'vue';
+import { usePackageStore } from '../stores/package.module';
+import { useOptionStore } from '../stores/option.module';
+import { usePackageOptionStore } from '../stores/package-option.module';
+import { useMagazineGroupStore } from '../stores/magazine-group.module';
+import { useWeeklyEditionChoiceStore } from '../stores/weekly-edition-choice.module';
+import { usePackageWeeklyEditionChoiceStore } from '../stores/package-weekly-edition-choice.module';
 
+const packageStore = usePackageStore();
+const optionStore = useOptionStore();
+const packageOptionStore = usePackageOptionStore();
+const magazineGroupStore = useMagazineGroupStore();
+const weeklyEditionChoiceStore = useWeeklyEditionChoiceStore();
+const packageWeeklyEditionChoiceStore = usePackageWeeklyEditionChoiceStore();
 const packageDialog = ref(false);
 const isEditMode = ref(false);
 const totalItems = ref(0);
@@ -151,26 +243,30 @@ const page = ref(1);
 const tableRows = ref([]);
 const itemsPerPage = ref(10);
 const loadingDataTable = ref(false);
+const loadingEditionChoices = ref(false);
 const loadingDialog = ref(false);
 const loadingOptions = ref(false);
 const loadingMagazineGroups = ref(false);
 const sortBy = ref([{ key: 'id', order: 'asc' }]);
 const valid = ref(false);
-const validOptions = ref(false);
 const deletePackageDialog = ref(null);
 const validMagazineGroups = ref(false);
 const isUploading = ref(false);
+const isRemovingFile = ref(false);
+const uploadError = ref('');
+const addedEditionChoices = ref([]);
 const snackbar = ref(false);
 const snackbarMessage = ref('');
 const snackbarColor = ref('success');
 const packageToDelete = ref(null);
 const addedOptions = ref([]);
+const search = ref('');
+const timeout = ref(null);
 
 const availableOptions = ref([]);
 const selectedOptions = ref([]);
 const optionDialog = ref(false);
 const currentPackage = ref(null);
-const selectedOptionsInitial = ref([]);
 const isAddingOptions = ref(false);
 
 const availableMagazineGroups = ref([]);
@@ -178,6 +274,11 @@ const selectedMagazineGroup = ref([]);
 const magazineGroupDialog = ref(false);
 const selectedMagazineGroupInitial = ref([]);
 const isAddingMagazineGroups = ref(false);
+
+const availableEditionChoices = ref([]);
+const selectedEditionChoices = ref([]);
+const editionChoiceDialog = ref(false);
+const isAddingEditionChoices = ref(false);
 
 const headers = ref([
     { title: "Id", value: "id", sortable: true },
@@ -194,7 +295,14 @@ const addedOptionsTableHeaders = ref([
     { title: "Levering naam", value: "delivery_name" },
     { title: "Week prijs", value: "week_price" },
     { title: "Acties", value: "actions", sortable: false },
-])
+]);
+
+const addedEditionChoicesTableHeaders = ref([
+    { title: "Id", value: "id" },
+    { title: "Week prijs", value: "week_price" },
+    { title: "Beschikbaar", value: "available" },
+    { title: "Acties", value: "actions", sortable: false },
+]);
 
 const pkg = ref({
     name: '',
@@ -208,6 +316,10 @@ const magazineGroupHeaders = ref([
 
 const getOptionLabel = (option) => {
     return `${option.delivery_name} (${option.magazine_amount} magazines, ${option.delivery_type}, €${option.week_price} per week)`;
+};
+
+const getEditionChoiceLabel = (choice) => {
+    return `€${choice.week_price} per week, ${choice.available ? 'Beschikbaar' : 'Niet beschikbaar'}`;
 };
 
 const showSnackbar = (message, color = 'success') => {
@@ -224,22 +336,15 @@ const isFormValid = computed(() => {
     return pkg.value.name && pkg.value.order && pkg.value.image_url;
 });
 
-const isOptionsFormValid = computed(() => {
-    const selectedOptionsSet = new Set(selectedOptions.value);
-    const initialOptionsSet = new Set(selectedOptionsInitial.value);
-
-    return selectedOptionsSet.size !== initialOptionsSet.size ||
-        [...selectedOptionsSet].some(option => !initialOptionsSet.has(option)) ||
-        [...initialOptionsSet].some(option => !selectedOptionsSet.has(option));
-});
+const userInput = () => {
+    clearTimeout(timeout.value);
+    timeout.value = setTimeout(() => {
+        getPackages();
+    }, 500);
+};
 
 const isMagazineGroupsFormValid = computed(() => {
-    const selectedMagazineGroupsSet = new Set(selectedMagazineGroup.value);
-    const initialMagazineGroupsSet = new Set(selectedMagazineGroupInitial.value);
-
-    return selectedMagazineGroupsSet.size !== initialMagazineGroupsSet.size ||
-        [...selectedMagazineGroupsSet].some(magazineGroup => !initialMagazineGroupsSet.has(magazineGroup)) ||
-        [...initialMagazineGroupsSet].some(magazineGroup => !selectedMagazineGroupsSet.has(magazineGroup));
+    return JSON.stringify(selectedMagazineGroup.value) !== JSON.stringify(selectedMagazineGroupInitial.value);
 });
 
 const getPackages = async () => {
@@ -247,41 +352,41 @@ const getPackages = async () => {
 
     const params = {
         page: page.value,
+        items_per_page: itemsPerPage.value,
         sort_by: sortBy.value[0].key,
         sort_dir: sortBy.value[0].order,
     };
 
-    axios.get('/api/packages', { params })
-        .then(response => {
-            tableRows.value = response.data.data;
-            console.log(tableRows.value);
-            totalItems.value = response.data.meta.pagination.total;
-        })
-        .catch(error => {
-            showSnackbar("Niet gelukt om pakketten op te halen.", "error");
-        })
-        .finally(() => {
-            loadingDataTable.value = false;
-        });
+    if (search.value) {
+        params.query = search.value;
+    };
+
+    try {
+        packageStore.packageData = await packageStore.getPackages(params);
+        tableRows.value = packageStore.packageData.data;
+        totalItems.value = packageStore.packageData.meta.pagination.total;
+    } catch (error) {
+        showSnackbar("Niet gelukt om pakketten op te halen.", "error");
+    } finally {
+        loadingDataTable.value = false;
+    }
 }
 
-const createPackage = () => {
+const createPackage = async () => {
     if (valid.value) {
         loadingDialog.value = true;
 
-        axios.post('/api/packages', pkg.value)
-            .then(response => {
-                showSnackbar("Pakket succesvol aangemakaakt!", "success");
-                getPackages();
-                packageDialog.value = false;
-                resetPackage();
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om pakket aan te maken.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-            });
+        try {
+            await packageStore.createPackage(pkg.value);
+            showSnackbar("Pakket succesvol aangemakaakt!", "success");
+            getPackages();
+            resetPackage();
+        } catch (error) {
+            showSnackbar("Niet gelukt om pakket aan te maken.", "error");
+        } finally {
+            loadingDialog.value = false;
+            packageDialog.value = false;
+        }
     } else {
         showSnackbar("Onjuiste invoer.", "error");
     };
@@ -291,19 +396,17 @@ const updatePackage = async () => {
     if (valid.value) {
         loadingDialog.value = true;
 
-        axios.put(`/api/packages/${pkg.value.id}`, pkg.value)
-            .then(response => {
-                showSnackbar("Pakket succesvol aangepast!", "success");
-                getPackages();
-                packageDialog.value = false;
-                resetPackage();
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om pakket te bewerken.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-            })
+        try {
+            await packageStore.updatePackage(pkg.value.id, pkg.value);
+            showSnackbar("Pakket succesvol aangepast!", "success");
+            getPackages();
+            resetPackage();
+        } catch (error) {
+            showSnackbar("Niet gelukt om pakket te bewerken.", "error");
+        } finally {
+            loadingDialog.value = false;
+            packageDialog.value = false;
+        }
     } else {
         showSnackbar("Onjuiste invoer.", "error");
     }
@@ -313,17 +416,16 @@ const removePackage = async (pkg) => {
     if (pkg) {
         loadingDialog.value = true;
 
-        axios.delete(`/api/packages/${pkg.id}`)
-            .then(response => {
-                getPackages();
-                showSnackbar("Pakket succesvol verwijderd!", "success");
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om pakket te verwijderen.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-            });
+        try {
+            await packageStore.removePackage(pkg.id);
+            showSnackbar("Pakket succesvol verwijderd!", "success");
+            getPackages();
+        } catch (error) {
+            showSnackbar("Niet gelukt om pakket te verwijderen.", "error");
+        } finally {
+            loadingDialog.value = false;
+            deletePackageDialog.value = false;
+        }
     }
 };
 
@@ -337,13 +439,23 @@ const addSelectedOptionsToTable = () => {
     selectedOptions.value = [];
 };
 
+const addSelectedEditionChoicesToTable = () => {
+    addedEditionChoices.value = addedEditionChoices.value.concat(selectedEditionChoices.value);
+
+    availableEditionChoices.value = availableEditionChoices.value.filter(
+        (choice) => !selectedEditionChoices.value.includes(choice)
+    );
+
+    selectedEditionChoices.value = [];
+};
+
 const addOptionsToPackage = async () => {
-    loadingOptions.value = true;
+    isAddingOptions.value = true;
 
     try {
         const optionIds = addedOptions.value.map(option => option.id);
 
-        await axios.put(`/api/packages/${currentPackage.value.id}`, {
+        await packageStore.updatePackage(currentPackage.value.id, {
             option_ids: optionIds,
         });
 
@@ -353,10 +465,29 @@ const addOptionsToPackage = async () => {
         showSnackbar("Fout bij het bewerken van opties", "error");
     } finally {
         isAddingOptions.value = false;
-        loadingOptions.value = false;
     }
 };
 
+const addEditionChoicesToPackage = async () => {
+    isAddingEditionChoices.value = true;
+
+    try {
+        const editionChoiceIds = addedEditionChoices.value.map(choice => choice.id);
+
+        await packageStore.updatePackage(currentPackage.value.id, {
+            weekly_edition_choice_ids: editionChoiceIds,
+        });
+
+        showSnackbar("Editie keuzes succesvol bijgewerkt!", "success");
+        editionChoiceDialog.value = false;
+    } catch (error) {
+        showSnackbar("Fout bij het bewerken van editie keuzes", "error");
+    } finally {
+        isAddingEditionChoices.value = false;
+    }
+};
+
+// TODO: kijken of dit weg kan
 const onOptionSelectionChange = () => {
     availableOptions.value = availableOptions.value.filter(
         option => !selectedOptions.value.includes(option.id)
@@ -369,40 +500,58 @@ const onOptionSelectionChange = () => {
     console.log(newSelectedOptions);
 };
 
+const onEditionChoiceSelectionChange = () => {
+    availableEditionChoices.value = availableEditionChoices.value.filter(
+        choice => !selectedEditionChoices.value.includes(choice.id)
+    );
+
+    const newSelectedEditionChoices = selectedEditionChoices.value.filter(
+        selectedChoice => !addedEditionChoices.value.some(added => added.id === selectedChoice.id)
+    );
+
+    console.log(newSelectedEditionChoices);
+};
+
 const removeOptionFromPackage = (option) => {
     addedOptions.value = addedOptions.value.filter(addedOption => addedOption.id !== option.id);
 
     availableOptions.value.push(option);
 };
 
+const removeEditionChoiceFromPackage = (editionChoice) => {
+    addedEditionChoices.value = addedEditionChoices.value.filter(addedChoice => addedChoice.id !== editionChoice.id);
+
+    availableEditionChoices.value.push(editionChoice);
+};
+
 const addMagazineGroupToPackage = async () => {
     const groupId = selectedMagazineGroup.value?.[0] || null;
 
     isAddingMagazineGroups.value = true;
-    loadingMagazineGroups.value = true;
 
     try {
-        const response = await axios.put(`/api/packages/${currentPackage.value.id}`, { magazine_group_id: groupId });
+        await packageStore.updatePackage(currentPackage.value.id, {
+            magazine_group_id: groupId,
+        });
 
         showSnackbar("Tijdschrift groep succesvol bijgewerkt!", "success");
         magazineGroupDialog.value = false;
     } catch (error) {
         showSnackbar("Fout bij het bijwerken van tijdschrift groep.", "error");
     } finally {
-        loadingMagazineGroups.value = false;
         isAddingMagazineGroups.value = false;
     }
-}
+};
 
 const getOptionsForPackage = async (packageId) => {
     try {
         loadingOptions.value = true;
 
-        const optionsResponse = await axios.get('/api/options');
-        availableOptions.value = optionsResponse.data.data;
+        optionStore.optionData = await optionStore.getOptions();
+        availableOptions.value = optionStore.optionData.data;
 
-        const packageOptionsResponse = await axios.get(`/api/packages/${packageId}/options`);
-        addedOptions.value = packageOptionsResponse.data;
+        packageOptionStore.packageOptionData = await packageOptionStore.getOptionsForPackage(packageId);
+        addedOptions.value = packageOptionStore.packageOptionData;
 
         availableOptions.value = availableOptions.value.filter(
             option => !addedOptions.value.some(added => added.id === option.id)
@@ -414,15 +563,36 @@ const getOptionsForPackage = async (packageId) => {
     }
 };
 
+const getEditionChoicesForPackage = async (packageId) => {
+    try {
+        loadingEditionChoices.value = true;
+
+        weeklyEditionChoiceStore.weeklyEditionChoiceData = await weeklyEditionChoiceStore.getWeeklyEditionChoices();
+        availableEditionChoices.value = weeklyEditionChoiceStore.weeklyEditionChoiceData.data;
+
+        packageWeeklyEditionChoiceStore.packageWeeklyEditionChoiceData = await packageWeeklyEditionChoiceStore.getWeeklyEditionChoicesForPackage(packageId);
+        addedEditionChoices.value = packageWeeklyEditionChoiceStore.packageWeeklyEditionChoiceData;
+
+        availableEditionChoices.value = availableEditionChoices.value.filter(
+            choice => !addedEditionChoices.value.some(added => added.id === choice.id)
+        );
+    } catch (error) {
+        showSnackbar("Fout bij het ophalen van editie keuzes.", "error");
+    } finally {
+        loadingEditionChoices.value = false;
+    }
+};
+
 const getMagazineGroupForPackage = async (packageId) => {
     try {
         loadingMagazineGroups.value = true;
-        const magazineGroupsResponse = await axios.get('/api/magazine-groups');
-        availableMagazineGroups.value = magazineGroupsResponse.data.data;
 
-        const packageByIdResponse = await axios.get(`/api/packages/${packageId}`);
-        
-        const magazineGroupId = packageByIdResponse.data.data.magazine_group_id;
+        magazineGroupStore.magazineGroupData = await magazineGroupStore.getMagazineGroups();
+        availableMagazineGroups.value = magazineGroupStore.magazineGroupData.data;
+
+        const packageByIdResponse = await packageStore.getPackage(packageId);
+
+        const magazineGroupId = packageByIdResponse.magazine_group_id;
 
         if (magazineGroupId) {
             selectedMagazineGroup.value = [magazineGroupId]
@@ -430,7 +600,7 @@ const getMagazineGroupForPackage = async (packageId) => {
             selectedMagazineGroup.value = [];
         }
 
-        selectedMagazineGroupInitial.value = selectedMagazineGroup.value;        
+        selectedMagazineGroupInitial.value = selectedMagazineGroup.value;
     } catch (error) {
         showSnackbar("Fout bij het ophalen van tijdschrift groepen.", "error");
     } finally {
@@ -443,6 +613,13 @@ const showAddOptionsDialog = (pkg) => {
     selectedOptions.value = [];
     optionDialog.value = true;
     getOptionsForPackage(pkg.id);
+}
+
+const showAddEditionChoicesDialog = (pkg) => {
+    currentPackage.value = pkg;
+    selectedEditionChoices.value = [];
+    editionChoiceDialog.value = true;
+    getEditionChoicesForPackage(pkg.id);
 }
 
 const showAddMagazineGroupDialog = (pkg) => {
@@ -476,7 +653,7 @@ const showCreatePackageDialog = () => {
 const showEditPackageDialog = (newPackage) => {
     isEditMode.value = true;
     pkg.value = { ...newPackage };
-    pkg.value = true;
+    packageDialog.value = true;
 };
 
 const handleUploadStart = () => {
@@ -489,13 +666,24 @@ const handleUploadFinish = () => {
 
 const handleUploadError = () => {
     isUploading.value = false;
+    uploadError.value = 'Er is een fout opgetreden bij het uploaden van de afbeelding.';
 };
 
 const handleFileUploaded = (file) => {
-    pkg.value.image_url = file.name;
+    pkg.value.image_url = file.url;
 };
 
-const handleFileRemoved = () => {
+const handleStartDeleteFile = () => {
+    isRemovingFile.value = true;
+};
+
+const handleRemoveFileError = () => {
+    isRemovingFile.value = false;
+    uploadError.value = 'Er is een fout opgetreden bij het verwijderen van de afbeelding.';
+}
+
+const handleFileDeleted = () => {
+    isRemovingFile.value = false;
     pkg.value.image_url = '';
 };
 

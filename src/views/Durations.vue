@@ -1,15 +1,17 @@
 <template>
     <v-app>
-        <v-card>
+        <v-card class="ma-4">
             <v-card-title>
+                <v-text-field v-model="search" label="Zoeken" @input="userInput"></v-text-field>
+                <v-spacer></v-spacer>
                 <v-btn color="primary" @click="showCreateDurationDialog">Nieuwe looptijd</v-btn>
             </v-card-title>
-            <v-data-table-server :headers="headers" :items="tableRows" :items-per-page="itemsPerPage" :sort-by="sortBy.key"
-                :sort-desc="sortBy.key" :items-length="totalItems" :loading="loadingDataTable"
+            <v-data-table-server :headers="headers" :items="tableRows" :items-per-page="itemsPerPage"
+                :sort-by="sortBy.key" :sort-desc="sortBy.key" :items-length="totalItems" :loading="loadingDataTable"
                 @update:options="updateOptions">
                 <template v-slot:item.actions="{ item }">
                     <v-icon color="warning" @click="showEditDurationDialog(item)">mdi-pencil</v-icon>
-                    <v-icon color="red" @click="removeDurationPrompt(item)">mdi-delete</v-icon>
+                    <v-icon color="red" @click="showRemoveDurationDialog(item)">mdi-delete</v-icon>
                 </template>
             </v-data-table-server>
         </v-card>
@@ -21,25 +23,52 @@
                         }}</span>
                 </v-card-title>
                 <v-card-text>
+                    <v-progress-linear v-if="loadingDialog" indeterminate color="blue" class="mb-3"></v-progress-linear>
                     <v-form ref="form" v-model="valid">
-                        <v-text-field v-model="duration.amount_of_months" label="Aantal maanden" required type="number"></v-text-field>
-                        <v-text-field v-model="duration.promotion_message" label="Promotie bericht" required></v-text-field>
+                        <v-text-field v-model="duration.amount_of_months" label="Aantal maanden" required
+                            type="number"></v-text-field>
+                        <v-text-field v-model="duration.promotion_message" label="Promotie bericht"
+                            required></v-text-field>
                     </v-form>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn color="blue darken-1" text @click="durationDialog = false">Annuleren</v-btn>
-                    <v-btn color="blue darken-1" text
-                        @click="isEditMode ? updateDuration() : createDuration()">Opslaan</v-btn>
+                    <v-btn color="blue darken-1" text @click="isEditMode ? updateDuration() : createDuration()"
+                        :disabled="!isFormValid || loadingDialog">Opslaan</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <v-dialog v-model="deleteDurationDialog" max-width="600px">
+            <v-card>
+                <v-card-title>
+                    <span class="headline">Weet u zeker dat u de looptijd wilt verwijderen?</span>
+                </v-card-title>
+                <v-card-text>
+                    <v-progress-linear v-if="loadingDialog" indeterminate color="blue" class="mb-3"></v-progress-linear>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="blue darken-1" text @click="cancelDelete">Annuleer</v-btn>
+                    <v-btn color="red darken-1" text @click="confirmDelete">Doorgaan</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000" top>
+            {{ snackbarMessage }}
+            <template v-slot:action>
+                <v-btn color="white" @click="hideSnackbar">Close</v-btn>
+            </template>
+        </v-snackbar>
     </v-app>
 </template>
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios';
+import { useDurationStore } from '../stores/duration.module';
 
+const durationStore = useDurationStore();
 const tableRows = ref([]);
 const durationDialog = ref(false);
 const isEditMode = ref(false);
@@ -53,17 +82,22 @@ const valid = ref(false);
 const snackbar = ref(false);
 const snackbarMessage = ref('');
 const snackbarColor = ref('success');
-
-const duration = ref({
-    amount_of_months: '',
-    promotion_message: '',
-});
+const durationToDelete = ref(null);
+const deleteDurationDialog = ref(null);
+const search = ref('');
+const timeout = ref(null);
 
 const headers = ref([
     { title: "Id", value: "id", sortable: true },
     { title: "Aantal maanden", value: "amount_of_months", sortable: true },
     { title: "Promotie bericht", value: "promotion_message", sortable: true },
+    { title: "Acties", value: "actions", sortable: false },
 ]);
+
+const duration = ref({
+    amount_of_months: '',
+    promotion_message: '',
+});
 
 const showSnackbar = (message, color = 'success') => {
     snackbarMessage.value = message;
@@ -75,6 +109,17 @@ const hideSnackbar = () => {
     snackbar.value = false;
 };
 
+const isFormValid = computed(() => {
+    return duration.value.amount_of_months && duration.value.promotion_message;
+});
+
+const userInput = () => {
+    clearTimeout(timeout.value);
+    timeout.value = setTimeout(() => {
+        getDurations();
+    }, 500);
+};
+
 const getDurations = async () => {
     loadingDataTable.value = true;
 
@@ -83,38 +128,38 @@ const getDurations = async () => {
         items_per_page: itemsPerPage.value,
         sort_by: sortBy.value[0].key,
         sort_dir: sortBy.value[0].order,
-    }
+    };
 
-    axios.get('/api/durations', { params })
-        .then(response => {
-            tableRows.value = response.data.data;
-            totalItems.value = response.data.meta.pagination.total;
-        })
-        .catch(error => {
-            showSnackbar("Niet gelukt om looptijden op te halen.", "error");
-        })
-        .finally(() => {
-            loadingDataTable.value = false;
-        });
+    if (search.value) {
+        params.query = search.value;
+    };
+
+    try {
+        durationStore.durationData = await durationStore.getDurations(params);
+        tableRows.value = durationStore.durationData.data;
+        totalItems.value = durationStore.durationData.meta.pagination.total;
+    } catch (error) {
+        showSnackbar("Niet gelukt om looptijden op te halen.", "error");
+    } finally {
+        loadingDataTable.value = false;
+    }
 }
 
 const createDuration = async () => {
     if (valid.value) {
         loadingDialog.value = true;
 
-        axios.post('/api/durations', duration.value)
-            .then(response => {
-                showSnackbar("Looptijd succesvol aangemakaakt!", "success");
-                getDurations();
-                durationDialog.value = false;
-                resetDuration();
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om looptijd aan te maken.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-            })
+        try {
+            await durationStore.createDuration(duration.value);
+            showSnackbar("Looptijd succesvol aangemakaakt!", "success");
+            getDurations();
+            resetDuration();
+        } catch (error) {
+            showSnackbar("Niet gelukt om looptijd aan te maken.", "error");
+        } finally {
+            loadingDialog.value = false;
+            durationDialog.value = false;
+        }
     } else {
         showSnackbar("Onjuiste invoer.", "error");
     }
@@ -124,19 +169,17 @@ const updateDuration = async () => {
     if (valid.value) {
         loadingDialog.value = true;
 
-        axios.put(`/api/durations/${duration.value.id}`, duration.value)
-            .then(response => {
-                showSnackbar("Looptijd succesvol aangepast!", "success");
-                getDurations();
-                durationDialog.value = false;
-                resetDuration();
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om looptijd te bewerken.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-            });
+        try {
+            await durationStore.updateDuration(duration.value.id, duration.value);
+            showSnackbar("Looptijd succesvol aangepast!", "success");
+            getDurations();
+            resetDuration();
+        } catch (error) {
+            showSnackbar("Niet gelukt om looptijd te bewerken.", "error");
+        } finally {
+            loadingDialog.value = false;
+            durationDialog.value = false;
+        }
     } else {
         showSnackbar("Onjuiste invoer.", "error");
     }
@@ -146,17 +189,16 @@ const removeDuration = async (duration) => {
     if (duration) {
         loadingDialog.value = true;
 
-        axios.delete(`/api/durations/${duration.id}`)
-        .then(response => {
-            getDurations();
+        try {
+            await durationStore.deleteDuration(duration.id);
             showSnackbar("Looptijd succesvol verwijderd!", "success");
-        })
-        .catch(error => {
+            getDurations();
+        } catch (error) {
             showSnackbar("Niet gelukt om looptijd te verwijderen.", "error");
-        })
-        .finally(() => {
+        } finally {
             loadingDialog.value = false;
-        });
+            deleteDurationDialog.value = false;
+        }
     }
 }
 
@@ -166,9 +208,23 @@ const showCreateDurationDialog = () => {
     durationDialog.value = true;
 };
 
-const showEditDurationDialog = () => {
+const cancelDelete = () => {
+    deleteDurationDialog.value = false;
+    durationToDelete.value = null;
+};
+
+const confirmDelete = () => {
+    removeDuration(durationToDelete.value);
+};
+
+const showRemoveDurationDialog = (duration) => {
+    durationToDelete.value = duration;
+    deleteDurationDialog.value = true;
+};
+
+const showEditDurationDialog = (newDuration) => {
     isEditMode.value = true;
-    duration.value = { ...duration };
+    duration.value = { ...newDuration };
     durationDialog.value = true;
 };
 

@@ -1,6 +1,6 @@
 <template>
     <v-app>
-        <v-card>
+        <v-card class="ma-4">
             <v-card-title>
                 <v-text-field v-model="search" label="Zoeken" @input="userInput"></v-text-field>
                 <v-btn color="primary" @click="showCreateSubscriptionAddOnDialog">Nieuwe abonnement add-on</v-btn>
@@ -9,8 +9,18 @@
                 :sort-by="sortBy.key" :sort-desc="sortBy.order" :items-length="totalItems" :loading="loadingDataTable"
                 @update:options="updateOptions">
                 <template v-slot:item.actions="{ item }">
-                    <v-icon color="warning" @click="showEditSubscriptionAddOnDialog(item)">mdi-pencil</v-icon>
-                    <v-icon color="red" @click="showRemoveSubscriptionAddOnDialog(item)">mdi-delete</v-icon>
+                    <v-row dense>
+                        <v-col cols="auto">
+                            <v-btn text color="warning" @click="showEditSubscriptionAddOnDialog(item)">
+                                Bewerken
+                            </v-btn>
+                        </v-col>
+                        <v-col cols="auto">
+                            <v-btn text color="red" @click="showRemoveSubscriptionAddOnDialog(item)">
+                                Verwijder
+                            </v-btn>
+                        </v-col>
+                    </v-row>
                 </template>
             </v-data-table-server>
         </v-card>
@@ -28,8 +38,8 @@
                         <v-text-field v-model="subscriptionAddOn.name" label="Naam" required></v-text-field>
                         <v-text-field v-model="subscriptionAddOn.description" label="Beschrijving"
                             required></v-text-field>
-                            <v-text-field v-model="subscriptionAddOn.price" label="Prijs" type="number" required
-                            min="0" step="1"></v-text-field>
+                        <v-text-field v-model="subscriptionAddOn.price" label="Prijs" type="number" required min="0"
+                            step="1"></v-text-field>
                         <DOSpacesUploadComponent @uploaded="handleFileUploaded" :isUploading="isUploading"
                             @upload-start="handleUploadStart" @upload-finish="handleUploadFinish"
                             @file-removed="handleFileRemoved" @upload-error="handleUploadError"
@@ -76,9 +86,10 @@
 </template>
 <script setup>
 import DOSpacesUploadComponent from '@/components/DOSpacesUploadComponent.vue';
-import axios from 'axios';
 import { ref, computed, onMounted } from 'vue';
+import { useSubscriptionAddOnStore } from '../stores/subscription-add-on.module';
 
+const subscriptionAddOnStore = useSubscriptionAddOnStore();
 const subscriptionAddOnDialog = ref(false);
 const isEditMode = ref(false);
 const totalItems = ref(0);
@@ -149,38 +160,32 @@ const getSubscriptionAddOns = async () => {
         params.query = search.value;
     };
 
-    axios.get('/api/subscription-add-ons', { params })
-        .then(response => {
-            tableRows.value = response.data.data;
-            totalItems.value = response.data.meta.pagination.total;
-        })
-        .catch(error => {
-            showSnackbar("Niet gelukt om abonnement add-ons op te halen.", "error");
-        })
-        .finally(() => {
-            loadingDataTable.value = false;
-        });
+    try {
+        subscriptionAddOnStore.subscriptionAddOnData = await subscriptionAddOnStore.getSubscriptionAddOns(params);
+        tableRows.value = subscriptionAddOnStore.subscriptionAddOnData.data;
+        totalItems.value = subscriptionAddOnStore.subscriptionAddOnData.meta.pagination.total;
+    } catch (error) {
+        showSnackbar("Niet gelukt om abonnement add-ons op te halen.", "error");
+    } finally {
+        loadingDataTable.value = false;
+    }
 }
 
-const createSubscriptionAddOn = () => {
+const createSubscriptionAddOn = async () => {
     if (valid.value) {
         loadingDialog.value = true;
 
-        console.log(subscriptionAddOn.value);
-
-        axios.post('/api/subscription-add-ons', subscriptionAddOn.value)
-            .then(response => {
-                showSnackbar("Abonnement add-on succesvol aangemakaakt!", "success");
-                getSubscriptionAddOns();
-                resetSubscriptionAddOn();
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om abonnement add-on aan te maken.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-                subscriptionAddOnDialog.value = false;
-            });
+        try {
+            await subscriptionAddOnStore.createSubscriptionAddOn(subscriptionAddOn.value);
+            showSnackbar("Abonnement add-on succesvol aangemakaakt!", "success");
+            getSubscriptionAddOns();
+            resetSubscriptionAddOn();
+        } catch (error) {
+            showSnackbar("Niet gelukt om abonnement add-on aan te maken.", "error");
+        } finally {
+            loadingDialog.value = false;
+            subscriptionAddOnDialog.value = false;
+        }
     } else {
         showSnackbar("Onjuiste invoer.", "error");
     };
@@ -190,19 +195,17 @@ const updateSubscriptionAddOn = async () => {
     if (valid.value) {
         loadingDialog.value = true;
 
-        axios.put(`/api/subscription-add-ons/${subscriptionAddOn.value.id}`, subscriptionAddOn.value)
-            .then(response => {
-                showSnackbar("Abonnement add-on succesvol aangepast!", "success");
-                getSubscriptionAddOns();
-                resetSubscriptionAddOn();
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om abonnement add-on te bewerken.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-                subscriptionAddOnDialog.value = false;
-            })
+        try {
+            await subscriptionAddOnStore.updateSubscriptionAddOn(subscriptionAddOn.value.id, subscriptionAddOn.value);
+            showSnackbar("Abonnement add-on succesvol aangepast!", "success");
+            getSubscriptionAddOns();
+            resetSubscriptionAddOn();
+        } catch (error) {
+            showSnackbar("Niet gelukt om abonnement add-on aan te passen.", "error");
+        } finally {
+            loadingDialog.value = false;
+            subscriptionAddOnDialog.value = false;
+        }
     } else {
         showSnackbar("Onjuiste invoer.", "error");
     }
@@ -212,18 +215,16 @@ const removeSubscriptionAddOn = async (subscriptionAddOn) => {
     if (subscriptionAddOn) {
         loadingDialog.value = true;
 
-        axios.delete(`/api/subscription-add-ons/${subscriptionAddOn.id}`)
-            .then(response => {
-                getSubscriptionAddOns();
-                showSnackbar("Abonnement add-on succesvol verwijderd!", "success");
-            })
-            .catch(error => {
-                showSnackbar("Niet gelukt om abonnement add-on te verwijderen.", "error");
-            })
-            .finally(() => {
-                loadingDialog.value = false;
-                deleteSubscriptionAddOnDialog.value = false;
-            });
+        try {
+            await subscriptionAddOnStore.deleteSubscriptionAddOn(subscriptionAddOn.id);
+            showSnackbar("Abonnement add-on succesvol verwijderd!", "success");
+            getSubscriptionAddOns();
+        } catch (error) {
+            showSnackbar("Niet gelukt om abonnement add-on te verwijderen.", "error");
+        } finally {
+            loadingDialog.value = false;
+            deleteSubscriptionAddOnDialog.value = false;
+        }
     }
 };
 
