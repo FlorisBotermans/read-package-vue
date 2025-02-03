@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '@/views/Home.vue'
 import Gifts from '@/views/Gifts.vue'
 import Subscriptions from '@/views/Subscriptions.vue'
 import Packages from '@/views/Packages.vue'
@@ -20,8 +19,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: Home,
-      meta: { requiresAuth: true },
+      redirect: '/subscriptions',
     },
     {
       path: '/subscriptions',

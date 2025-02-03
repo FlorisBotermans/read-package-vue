@@ -47,9 +47,6 @@
     <!-- Navigation Drawer -->
     <v-navigation-drawer v-if="currentAuth" v-model="drawer" theme="dark" permanent>
       <v-list>
-        <v-list-item link to="/" exact>
-          <v-list-item-title>Home</v-list-item-title>
-        </v-list-item>
         <v-list-item link to="/subscriptions">
           <v-list-item-title>Abonnementen</v-list-item-title>
         </v-list-item>

@@ -68,7 +68,10 @@
                     <v-progress-linear v-if="loadingDialog" indeterminate color="blue" class="mb-3"></v-progress-linear>
                     <v-form ref="form" v-model="valid"
                         @submit.prevent="isEditMode ? updateSubscription() : createSubscription()">
-                        <v-text-field v-model="subscription.type" label="Type" required></v-text-field>
+                        <v-select v-model="subscription.type" :items="[
+                            { value: 'business', title: 'Zakelijk' },
+                            { value: 'consumer', title: 'Particulier' },
+                        ]" label="Type" required></v-select>
                         <v-text-field v-model="subscription.company" label="Bedrijf" required></v-text-field>
                     </v-form>
                 </v-card-text>
@@ -508,7 +511,7 @@ const addOnHeaders = ref([
 ]);
 
 const subscription = ref({
-    type: '',
+    type: 'business',
     company: '',
 });
 
@@ -1106,7 +1109,7 @@ const showEditSubscriptionDialog = (newSubscription) => {
 
 const resetSubscription = () => {
     subscription.value = {
-        type: '',
+        type: 'business',
         company: '',
     };
 };

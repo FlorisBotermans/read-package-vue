@@ -40,8 +40,8 @@
                     <v-form ref="form" v-model="valid" @submit.prevent="isEditMode ? updateOption() : createOption()">
                         <v-text-field v-model="option.magazine_amount" label="Aantal tijdschriften" type="number"
                             required min="0" step="1"></v-text-field>
-                        <v-text-field v-model="option.delivery_type" label="Levering type" required></v-text-field>
-                        <v-text-field v-model="option.delivery_name" label="Levering naam" required></v-text-field>
+                            <v-text-field v-model="option.delivery_name" label="Levering naam" required></v-text-field>
+                            <v-text-field v-model="delivery_type" label="Levering type" readonly></v-text-field>
                         <v-text-field v-model="option.week_price" label="Week prijs" type="number" required min="0"
                             step="1"></v-text-field>
                     </v-form>
@@ -81,6 +81,7 @@
 </template>
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import slugify from 'slugify'
 import { useOptionStore } from '../stores/option.module';
 
 const optionStore = useOptionStore();
@@ -105,18 +106,21 @@ const timeout = ref(null);
 const headers = ref([
     { title: "Id", value: "id", sortable: true },
     { title: "Tijdschrift aantal", value: "magazine_amount", sortable: true },
-    { title: "Levering type", value: "delivery_type", sortable: true },
     { title: "Levering naam", value: "delivery_name", sortable: true },
+    { title: "Levering type", value: "delivery_type", sortable: true },
     { title: "Week prijs", value: "week_price", sortable: true },
     { title: "Acties", value: "actions", sortable: false },
 ]);
 
 const option = ref({
     magazine_amount: '',
-    delivery_type: '',
     delivery_name: '',
     week_price: '',
 });
+
+const delivery_type = computed(() => {
+    return slugify(option.value.delivery_name, { lower: true });
+})
 
 const showSnackbar = (message, color = 'success') => {
     snackbarMessage.value = message;
@@ -129,7 +133,7 @@ const hideSnackbar = () => {
 };
 
 const isFormValid = computed(() => {
-    return option.value.magazine_amount && option.value.delivery_type && option.value.delivery_name && option.value.week_price;
+    return option.value.magazine_amount && option.value.delivery_name && option.value.week_price;
 });
 
 const userInput = () => {
@@ -169,7 +173,10 @@ const createOption = async () => {
         loadingDialog.value = true;
 
         try {
-            await optionStore.createOption(option.value);
+            await optionStore.createOption({
+                ...option.value,
+                delivery_type: delivery_type.value,
+            });
             showSnackbar("Optie succesvol aangemakaakt!", "success");
             getOptions();
             resetOption();
@@ -250,7 +257,6 @@ const showEditOptionDialog = (newOption) => {
 const resetOption = () => {
     option.value = {
         magazine_amount: '',
-        delivery_type: '',
         delivery_name: '',
         week_price: '',
     };
