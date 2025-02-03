@@ -110,7 +110,7 @@ const hideSnackbar = () => {
 };
 
 const isFormValid = computed(() => {
-    return duration.value.amount_of_months && duration.value.promotion_message;
+    return duration.value.amount_of_months
 });
 
 const userInput = () => {
