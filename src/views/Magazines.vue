@@ -127,7 +127,7 @@ const headers = ref([
     { title: "Id", value: "id", sortable: true },
     { title: "Naam", value: "name", sortable: true },
     { title: "Afbeelding", value: "image_url", sortable: false },
-    { title: "Externe bron", value: "external_source", sortable: true },
+    { title: "Bron", value: "external_source", sortable: true },
     { title: "Acties", value: "actions", sortable: false },
 ]);
 
