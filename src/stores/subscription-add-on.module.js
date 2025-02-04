@@ -41,9 +41,9 @@ export const useSubscriptionAddOnStore = defineStore('subscriptionaddonstore', {
                 }
             );
         },
-        async updateSubscriptionAddOn(subscriptionAddOn) {
+        async updateSubscriptionAddOn(id, body) {
             this.statusMessage = null;
-            return SubscriptionAddOnService.updateSubscriptionAddOn(subscriptionAddOn).then(
+            return SubscriptionAddOnService.updateSubscriptionAddOn(id, body).then(
                 subscriptionAddOn => {
                     this.statusMessage = "Abonnement add-on succesvol aangepast!";
                     return Promise.resolve(subscriptionAddOn.data.data);

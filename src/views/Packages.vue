@@ -194,9 +194,6 @@
                         <template v-slot:item.week_price="{ item }">
                             €{{ parseFloat(item.week_price).toFixed(2) }}
                         </template>
-                        <template v-slot:item.available="{ item }">
-                            <span>{{ item.available ? 'Ja' : 'Nee' }}</span>
-                        </template>
                         <template v-slot:item.actions="{ item }">
                             <v-icon color="red" @click="removeEditionChoiceFromPackage(item)">mdi-delete</v-icon>
                         </template>
@@ -302,8 +299,8 @@ const addedOptionsTableHeaders = ref([
 
 const addedEditionChoicesTableHeaders = ref([
     { title: "Id", value: "id" },
+    { title: "Week nummer", value: "week_number" },
     { title: "Week prijs", value: "week_price" },
-    { title: "Beschikbaar", value: "available" },
     { title: "Acties", value: "actions", sortable: false },
 ]);
 
@@ -322,7 +319,7 @@ const getOptionLabel = (option) => {
 };
 
 const getEditionChoiceLabel = (choice) => {
-    return `€${choice.week_price} per week, ${choice.available ? 'Beschikbaar' : 'Niet beschikbaar'}`;
+    return `week nummer: ${choice.week_number}, €${choice.week_price} per week`;
 };
 
 const showSnackbar = (message, color = 'success') => {
@@ -490,7 +487,6 @@ const addEditionChoicesToPackage = async () => {
     }
 };
 
-// TODO: kijken of dit weg kan
 const onOptionSelectionChange = () => {
     availableOptions.value = availableOptions.value.filter(
         option => !selectedOptions.value.includes(option.id)

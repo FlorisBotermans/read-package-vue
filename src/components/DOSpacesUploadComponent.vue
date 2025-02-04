@@ -1,20 +1,30 @@
 <template>
     <v-container fluid class="pa-0 ma-0">
-        <!-- File List Card -->
         <v-card v-if="files.length > 0" class="files-card">
+            <v-card-title class="card-title">
+                <v-icon color="primary" class="mr-2">mdi-file</v-icon> Geüploade afbeelding
+            </v-card-title>
+            <v-divider></v-divider>
             <v-list>
                 <v-list-item v-for="(file, index) in files" :key="index" class="file-item">
-                    <v-img v-if="file.preview" :src="file.preview" max-width="48" max-height="48"
-                        class="file-thumbnail" />
+                    <v-avatar size="56" class="file-thumbnail">
+                        <v-img v-if="file.preview" :src="file.preview" cover />
+                    </v-avatar>
                     <v-list-item-content>
                         <v-list-item-subtitle v-if="file.uploadError" class="error-text">
-                            ⚠ Error uploading file
+                            ⚠ Fout bij het uploaden van bestanden
                         </v-list-item-subtitle>
                     </v-list-item-content>
                     <v-list-item-action>
-                        <v-btn icon color="error" variant="text" @click="handleClickDeleteFile(index)">
-                            <v-icon>mdi-close-circle</v-icon>
-                        </v-btn>
+                        <v-tooltip bottom>
+                            <template v-slot:activator="{ props }">
+                                <v-btn icon color="error" variant="text" v-bind="props"
+                                    @click="handleClickDeleteFile(index)">
+                                    <v-icon>mdi-trash-can-outline</v-icon>
+                                </v-btn>
+                            </template>
+                            <span>Verwijder afbeelding</span>
+                        </v-tooltip>
                     </v-list-item-action>
                 </v-list-item>
             </v-list>
@@ -23,7 +33,7 @@
         <div v-else class="dropzone" v-bind="getRootProps()">
             <v-sheet class="dropzone-sheet">
                 <input v-bind="getInputProps()" />
-                <v-icon size="48" color="primary">mdi-cloud-upload</v-icon>
+                <v-icon size="56" color="primary">mdi-cloud-upload</v-icon>
                 <p class="dropzone-text">{{ isDragActive ? 'Drop files here...' : msg }}</p>
             </v-sheet>
         </div>
@@ -121,7 +131,6 @@ function handleClickDeleteFile(index) {
 }
 
 watch(() => props.file, (newFile) => {
-    console.log(newFile)
     if (newFile && !files.value.some(f => f.file === newFile)) {
         files.value = [{ file: newFile, preview: newFile, uploading: false, uploadError: false }];
     }
@@ -137,16 +146,27 @@ watch(() => props.file, (newFile) => {
 .files-card {
     width: 100%;
     background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
+    padding: 10px;
+    overflow: hidden;
+}
+
+.card-title {
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+    font-weight: 600;
+    padding: 10px 16px;
+    color: #333;
 }
 
 .file-item {
     display: flex;
     align-items: center;
-    padding: 16px;
-    border-bottom: 1px solid #f1f1f1;
+    padding: 12px;
+    border-bottom: 1px solid #eee;
     transition: background 0.3s ease-in-out;
 }
 
@@ -181,7 +201,7 @@ watch(() => props.file, (newFile) => {
 
 .dropzone-sheet {
     border: 2px dashed #bbb;
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 40px;
     text-align: center;
     transition: 0.3s;

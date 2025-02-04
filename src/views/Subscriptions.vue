@@ -9,6 +9,9 @@
             <v-data-table :headers="headers" :items="tableRows" :items-per-page="itemsPerPage" :sort-by="sortBy.key"
                 :sort-desc="sortBy.order" :server-items-length="totalItems" :loading="loadingSubscriptionsDataTable"
                 @update:options="updateSubscriptionOptions">
+                <template v-slot:item.type="{ item }">
+                    {{ item.type === 'business' ? 'Zakelijk' : item.type === 'consumer' ? 'Particulier' : 'Onbekend' }}
+                </template>
                 <template v-slot:item.actions="{ item }">
                     <v-row dense>
                         <v-col cols="auto">

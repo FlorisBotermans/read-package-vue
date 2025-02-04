@@ -13,9 +13,6 @@
                 <template v-slot:item.week_price="{ item }">
                     €{{ parseFloat(item.week_price).toFixed(2) }}
                 </template>
-                <template v-slot:item.available="{ item }">
-                    {{ item.available ? 'Ja' : 'Nee' }}
-                </template>
                 <template v-slot:item.actions="{ item }">
                     <v-row dense>
                         <v-col cols="auto">
@@ -43,13 +40,10 @@
                     <v-progress-linear v-if="loadingDialog" indeterminate color="blue" class="mb-3"></v-progress-linear>
                     <v-form ref="form" v-model="valid"
                         @submit.prevent="isEditMode ? updateWeeklyEditionChoice() : createWeeklyEditionChoice()">
-                        <v-text-field v-model="weeklyEditionChoice.name" label="Naam" required></v-text-field>
+                        <v-text-field v-model="weeklyEditionChoice.week_number" label="Week nummer" type="number" required
+                            min="0" step="1"></v-text-field>
                         <v-text-field v-model="weeklyEditionChoice.week_price" label="Week prijs" type="number" required
                             min="0" step="1"></v-text-field>
-                        <v-select v-model="weeklyEditionChoice.available" :items="[
-                            { text: 'Ja', value: true },
-                            { text: 'Nee', value: false }
-                        ]" label="Beschikbaar" required item-title="text" item-value="value"></v-select>
                     </v-form>
                 </v-card-text>
                 <v-card-actions>
@@ -111,16 +105,14 @@ const timeout = ref(null);
 
 const headers = ref([
     { title: "Id", value: "id", sortable: true },
-    { title: "Naam", value: "name", sortable: true },
+    { title: "Week nummer", value: "week_number", sortable: true },
     { title: "Week prijs", value: "week_price", sortable: true },
-    { title: "Beschikbaar", value: "available", sortable: true },
     { title: "Acties", value: "actions", sortable: false },
 ]);
 
 const weeklyEditionChoice = ref({
-    name: '',
+    week_number: '',
     week_price: '',
-    available: true,
 });
 
 const showSnackbar = (message, color = 'success') => {
@@ -134,7 +126,7 @@ const hideSnackbar = () => {
 };
 
 const isFormValid = computed(() => {
-    return weeklyEditionChoice.value.name && weeklyEditionChoice.value.week_price;
+    return weeklyEditionChoice.value.week_number && weeklyEditionChoice.value.week_price;
 });
 
 const userInput = () => {
@@ -248,18 +240,14 @@ const showRemoveWeeklyEditionChoiceDialog = (weeklyEditionChoice) => {
 
 const showEditWeeklyEditionChoiceDialog = (newWeeklyEditionChoice) => {
     isEditMode.value = true;
-    weeklyEditionChoice.value = {
-        ...newWeeklyEditionChoice,
-        available: !!newWeeklyEditionChoice.available,
-    };
+    weeklyEditionChoice.value = { ...newWeeklyEditionChoice };
     weeklyEditionChoiceDialog.value = true;
 };
 
 const resetWeeklyEditionChoice = () => {
     weeklyEditionChoice.value = {
-        name: '',
+        week_number: '',
         week_price: '',
-        available: true,
     };
 };
 
