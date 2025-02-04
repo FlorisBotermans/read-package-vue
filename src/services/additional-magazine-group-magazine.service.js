@@ -2,7 +2,7 @@ import axios from "./axios-setup";
 
 class AdditionalMagazineGroupMagazineService {
     getMagazinesForAdditionalMagazineGroup(id) {
-        return axios.get(`/api/additional-magazine-groups/${id}/magazines`);
+        return axios.get(`/additional-magazine-groups/${id}/magazines`);
     }
 }
 

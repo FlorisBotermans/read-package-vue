@@ -2,7 +2,7 @@ import axios from "./axios-setup";
 
 class SubscriptionPackageService {
     getPackagesForSubscription(id) {
-        return axios.get(`/api/subscriptions/${id}/packages`);
+        return axios.get(`/subscriptions/${id}/packages`);
     }
 }
 

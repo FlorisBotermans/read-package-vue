@@ -61,7 +61,7 @@ const { getRootProps, getInputProps, isDragActive } = useDropzone({
 
 async function getPresignedUrl() {
     try {
-        const response = await axios.get(`/api/do-spaces/upload/request`, {
+        const response = await axios.get(`/do-spaces/upload/request`, {
             params: { extension: props.extension, folder: props.folder },
         });
         filename.value = response.data.filename;
@@ -112,7 +112,7 @@ function handleClickDeleteFile(index) {
     const pathToDelete = url.pathname.substring(1);
 
     const encodedFileName = btoa(pathToDelete);
-    axios.delete(`/api/do-spaces/file/${encodedFileName}`)
+    axios.delete(`/do-spaces/file/${encodedFileName}`)
         .then(() => {
             files.value.splice(index, 1);
             emit('file-deleted');
@@ -121,6 +121,7 @@ function handleClickDeleteFile(index) {
 }
 
 watch(() => props.file, (newFile) => {
+    console.log(newFile)
     if (newFile && !files.value.some(f => f.file === newFile)) {
         files.value = [{ file: newFile, preview: newFile, uploading: false, uploadError: false }];
     }

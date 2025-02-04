@@ -129,6 +129,9 @@
                 <v-card-title>
                     <span class="headline">Weet u zeker dat u de pakket wilt verwijderen?</span>
                 </v-card-title>
+                <v-card-text>
+                    <v-progress-linear v-if="loadingDialog" indeterminate color="blue" class="mb-3"></v-progress-linear>
+                </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn color="blue darken-1" text @click="cancelDelete">Annuleer</v-btn>
@@ -284,7 +287,7 @@ const headers = ref([
     { title: "Id", value: "id", sortable: true },
     { title: "Naam", value: "name", sortable: true },
     { title: "Volgorde", value: "order", sortable: true },
-    { title: "Image url", value: "image_url", sortable: false },
+    { title: "Afbeelding", value: "image_url", sortable: false },
     { title: "Acties", value: "actions", sortable: false },
 ]);
 
@@ -417,7 +420,7 @@ const removePackage = async (pkg) => {
         loadingDialog.value = true;
 
         try {
-            await packageStore.removePackage(pkg.id);
+            await packageStore.deletePackage(pkg.id);
             showSnackbar("Pakket succesvol verwijderd!", "success");
             getPackages();
         } catch (error) {
@@ -641,7 +644,6 @@ const cancelDelete = () => {
 
 const confirmDelete = () => {
     removePackage(packageToDelete.value);
-    deletePackageDialog.value = false;
 }
 
 const showCreatePackageDialog = () => {

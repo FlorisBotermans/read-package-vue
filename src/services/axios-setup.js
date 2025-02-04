@@ -2,7 +2,7 @@ import axios from 'axios';
 import authHeader from './auth-header';
 
 // TODO: env variable
-const API_URL = 'https://14e85f55ee505a.lhr.life';
+const API_URL = 'https://be1d62ba81751e.lhr.life' + '/api/cms';
 
 const axiosInstance = axios.create({
     baseURL: API_URL,

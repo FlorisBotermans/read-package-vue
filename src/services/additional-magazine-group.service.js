@@ -2,19 +2,19 @@ import axios from "./axios-setup";
 
 class AdditionalMagazineGroupService {
     createAdditionalMagazineGroup(additionalMagazineGroup) {
-        return axios.post('/api/additional-magazine-groups', additionalMagazineGroup);
+        return axios.post('/additional-magazine-groups', additionalMagazineGroup);
     }
     getAdditionalMagazineGroups(params) {
-        return axios.get('/api/additional-magazine-groups', { params });
+        return axios.get('/additional-magazine-groups', { params });
     }
     getAdditionalMagazineGroup(id) {
-        return axios.get(`/api/additional-magazine-groups/${id}`);
+        return axios.get(`/additional-magazine-groups/${id}`);
     }
     updateAdditionalMagazineGroup(id, body) {
-        return axios.put(`/api/additional-magazine-groups/${id}`, body);
+        return axios.put(`/additional-magazine-groups/${id}`, body);
     }
     deleteAdditionalMagazineGroup(id) {
-        return axios.delete(`/api/additional-magazine-groups/${id}`);
+        return axios.delete(`/additional-magazine-groups/${id}`);
     }
 }
 

@@ -296,29 +296,28 @@ const resetGift = () => {
     };
 };
 
-const mapMonthsToInteger = (monthString) => {
-    const mapping = {
-        '3 maanden': 3,
-        '12 maanden': 12,
-        '24 maanden': 24,
-    };
-    return mapping[monthString] || 0;
-};
-
 const updateOptions = (options) => {
-    if (!options.sortBy || options.sortBy.length === 0) {
-        sortBy.value = [{ key: 'id', order: 'asc' }];
-        getGifts();
-        return;
-    }
+    const currentSort = Array.isArray(sortBy.value) && sortBy.value.length > 0
+        ? sortBy.value[0]
+        : { key: 'id', order: 'asc' };
 
-    if (options.sortBy[0].key !== sortBy.value[0].key || options.sortBy[0].order !== sortBy.value[0].order) {
-        sortBy.value[0].key = options.sortBy[0].key;
-        sortBy.value[0].order = options.sortBy[0].order;
-        getGifts();
-    } else if (options.page !== page.value || options.itemsPerPage !== itemsPerPage.value) {
+    const newSort = Array.isArray(options.sortBy) && options.sortBy.length > 0
+        ? options.sortBy[0]
+        : null;
+
+    const shouldUpdateSort = newSort && (newSort.key !== currentSort.key || newSort.order !== currentSort.order);
+    const shouldUpdatePagination = options.page !== page.value || options.itemsPerPage !== itemsPerPage.value;
+
+    if (!newSort || shouldUpdateSort || shouldUpdatePagination) {
+        if (!newSort) {
+            sortBy.value = [{ key: 'id', order: 'asc' }];
+        } else if (shouldUpdateSort) {
+            sortBy.value[0] = newSort;
+        }
+
         page.value = options.page;
         itemsPerPage.value = options.itemsPerPage;
+
         getGifts();
     }
 };

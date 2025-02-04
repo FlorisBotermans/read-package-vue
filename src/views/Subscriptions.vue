@@ -126,6 +126,9 @@
 
                         <v-data-table :headers="addOnHeaders" :items="availableDigitalAddOns" select-strategy="single"
                             show-select v-model="selectedDigitalAddOn">
+                            <template v-slot:item.image_url="{ item }">
+                                <v-img max-width="50" :src="item.image_url"></v-img>
+                            </template>
                         </v-data-table>
 
                     </v-form>
@@ -156,6 +159,9 @@
 
                         <v-data-table :headers="addOnHeaders" :items="availablePaperAddOns" select-strategy="single"
                             show-select v-model="selectedPaperAddOn">
+                            <template v-slot:item.image_url="{ item }">
+                                <v-img max-width="50" :src="item.image_url"></v-img>
+                            </template>
                         </v-data-table>
 
                     </v-form>

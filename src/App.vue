@@ -83,6 +83,9 @@
         <v-list-item link to="/gifts">
           <v-list-item-title>Welkomscadeau's</v-list-item-title>
         </v-list-item>
+        <v-list-item link to="/addresses">
+          <v-list-item-title>Adressen</v-list-item-title>
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
 

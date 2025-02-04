@@ -2,7 +2,7 @@ import axios from "./axios-setup";
 
 class SubscriptionDurationService {
     getDurationsForSubscription(id) {
-        return axios.get(`/api/subscriptions/${id}/durations`);
+        return axios.get(`/subscriptions/${id}/durations`);
     }
 }
 

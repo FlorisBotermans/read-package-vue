@@ -2,16 +2,16 @@ import axios from "./axios-setup";
 
 class GiftService {
     createGift(gift) {
-        return axios.post('/api/gifts', gift);
+        return axios.post('/gifts', gift);
     }
     getGifts(params) {
-        return axios.get('/api/gifts', { params });
+        return axios.get('/gifts', { params });
     }
     updateGift(id, body) {
-        return axios.put(`/api/gifts/${id}`, body);
+        return axios.put(`/gifts/${id}`, body);
     }
     deleteGift(id) {
-        return axios.delete(`/api/gifts/${id}`);
+        return axios.delete(`/gifts/${id}`);
     }
 }
 

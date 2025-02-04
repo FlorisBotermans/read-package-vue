@@ -2,16 +2,16 @@ import axios from "./axios-setup";
 
 class DurationService {
     createDuration(duration) {
-        return axios.post('/api/durations', duration);
+        return axios.post('/durations', duration);
     }
     getDurations(params) {
-        return axios.get('/api/durations', { params });
+        return axios.get('/durations', { params });
     }
     updateDuration(id, body) {
-        return axios.put(`/api/durations/${id}`, body);
+        return axios.put(`/durations/${id}`, body);
     }
     deleteDuration(id) {
-        return axios.delete(`/api/durations/${id}`);
+        return axios.delete(`/durations/${id}`);
     }
 }
 

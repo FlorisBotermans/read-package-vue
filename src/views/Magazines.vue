@@ -126,7 +126,7 @@ const timeout = ref(null);
 const headers = ref([
     { title: "Id", value: "id", sortable: true },
     { title: "Naam", value: "name", sortable: true },
-    { title: "Image url", value: "image_url", sortable: false },
+    { title: "Afbeelding", value: "image_url", sortable: false },
     { title: "Externe bron", value: "external_source", sortable: true },
     { title: "Acties", value: "actions", sortable: false },
 ]);
@@ -157,15 +157,6 @@ const userInput = () => {
         getMagazines();
     }, 500);
 };
-
-// const filteredTableRows = computed(() => {
-//     if (!selectedSource.value) return tableRows.value;
-//     return tableRows.value.filter((item) =>
-//         selectedSource.value === "Read Package CMS"
-//             ? !item.external_source
-//             : item.external_source === selectedSource.value
-//     );
-// });
 
 const getMagazines = async () => {
     loadingDataTable.value = true;

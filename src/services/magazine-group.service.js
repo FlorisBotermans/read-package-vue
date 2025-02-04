@@ -2,19 +2,19 @@ import axios from "./axios-setup";
 
 class MagazineGroupService {
     createMagazineGroup(magazineGroup) {
-        return axios.post('/api/magazine-groups', magazineGroup);
+        return axios.post('/magazine-groups', magazineGroup);
     }
     getMagazineGroups(params) {
-        return axios.get('/api/magazine-groups', { params });
+        return axios.get('/magazine-groups', { params });
     }
     getMagazineGroup(id) {
-        return axios.get(`/api/magazine-groups/${id}`);
+        return axios.get(`/magazine-groups/${id}`);
     }
     updateMagazineGroup(id, body) {
-        return axios.put(`/api/magazine-groups/${id}`, body);
+        return axios.put(`/magazine-groups/${id}`, body);
     }
     deleteMagazineGroup(id) {
-        return axios.delete(`/api/magazine-groups/${id}`);
+        return axios.delete(`/magazine-groups/${id}`);
     }
 }
 

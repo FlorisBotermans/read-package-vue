@@ -2,19 +2,19 @@ import axios from "./axios-setup";
 
 class PackageService {
     createPackage(pkg) {
-        return axios.post('/api/packages', pkg);
+        return axios.post('/packages', pkg);
     }
     getPackages(params) {
-        return axios.get('/api/packages', { params });
+        return axios.get('/packages', { params });
     }
     getPackage(id) {
-        return axios.get(`/api/packages/${id}`);
+        return axios.get(`/packages/${id}`);
     }
     updatePackage(id, body) {
-        return axios.put(`/api/packages/${id}`, body);
+        return axios.put(`/packages/${id}`, body);
     }
     deletePackage(id) {
-        return axios.delete(`/api/packages/${id}`);
+        return axios.delete(`/packages/${id}`);
     }
 }
 

@@ -8,6 +8,12 @@
             <v-data-table-server :headers="headers" :items="tableRows" :items-per-page="itemsPerPage"
                 :sort-by="sortBy.key" :sort-desc="sortBy.order" :items-length="totalItems" :loading="loadingDataTable"
                 @update:options="updateOptions">
+                <template v-slot:item.price="{ item }">
+                    €{{ parseFloat(item.price).toFixed(2) }}
+                </template>
+                <template v-slot:item.image_url="{ item }">
+                    <v-img max-width="50" :src="item.image_url"></v-img>
+                </template>
                 <template v-slot:item.actions="{ item }">
                     <v-row dense>
                         <v-col cols="auto">
@@ -40,14 +46,17 @@
                             required></v-text-field>
                         <v-text-field v-model="subscriptionAddOn.price" label="Prijs" type="number" required min="0"
                             step="1"></v-text-field>
-                        <DOSpacesUploadComponent @uploaded="handleFileUploaded" :isUploading="isUploading"
-                            @upload-start="handleUploadStart" @upload-finish="handleUploadFinish"
-                            @file-removed="handleFileRemoved" @upload-error="handleUploadError"
-                            v-bind="isEditMode ? { file: subscriptionAddOn.image_url } : {}"
-                            accepted="image/jpeg,image/png"
-                            msg="Upload hier de afbeelding (alleen jpeg en png) die hoort bij dit welkomscadeau (max 5 mb).)"
-                            extension="jpeg">
+                            <DOSpacesUploadComponent @uploaded="handleFileUploaded" @upload-start="handleUploadStart"
+                            @upload-finish="handleUploadFinish" @delete-start="handleStartDeleteFile"
+                            @file-deleted="handleFileDeleted" @upload-error="handleUploadError"
+                            @delete-error="handleRemoveFileError"
+                            v-bind="isEditMode ? { file: subscriptionAddOn.image_url } : {}" accepted="image/jpeg,image/png"
+                            msg="Upload hier de afbeelding (alleen jpeg en png) die hoort bij deze abonnement add-on (max 5 mb).)"
+                            extension="jpeg" folder="subscription-add-ons" :maxSize="5">
                         </DOSpacesUploadComponent>
+
+                        <v-progress-linear v-if="isUploading || isRemovingFile" indeterminate color="blue"
+                            class="mb-3"></v-progress-linear>
                     </v-form>
                 </v-card-text>
                 <v-card-actions>
@@ -97,6 +106,8 @@ const page = ref(1);
 const tableRows = ref([]);
 const itemsPerPage = ref(10);
 const loadingDataTable = ref(false);
+const isRemovingFile = ref(false);
+const uploadError = ref(false);
 const loadingDialog = ref(false);
 const sortBy = ref([{ key: 'id', order: 'asc' }]);
 const valid = ref(false);
@@ -264,15 +275,26 @@ const handleUploadFinish = () => {
 
 const handleUploadError = () => {
     isUploading.value = false;
+    uploadError.value = 'Er is een fout opgetreden bij het uploaden van de afbeelding.';
 };
 
 const handleFileUploaded = (file) => {
-    subscriptionAddOn.value.image_url = file.name;
+    subscriptionAddOn.value.image_url = file.url;
 };
 
-const handleFileRemoved = () => {
-    subscriptionAddOn.value.image_url = '';
+const handleStartDeleteFile = () => {
+    isRemovingFile.value = true;
+};
+
+const handleRemoveFileError = () => {
+    isRemovingFile.value = false;
+    uploadError.value = 'Er is een fout opgetreden bij het verwijderen van de afbeelding.';
 }
+
+const handleFileDeleted = () => {
+    isRemovingFile.value = false;
+    subscriptionAddOn.value.image_url = '';
+};
 
 const resetSubscriptionAddOn = () => {
     subscriptionAddOn.value = {

@@ -18,7 +18,7 @@ class AuthService {
 
     async login(user) {
         const response = await axios
-            .post('api/login', {
+            .post('login', {
                 email: user.email,
                 password: user.password
             });
