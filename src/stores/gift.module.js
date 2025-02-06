@@ -22,7 +22,7 @@ export const useGiftStore = defineStore('giftstore', {
             this.statusMessage = null;
             return GiftService.createGift(gift).then(
                 gift => {
-                    this.statusMessage = "Welkomscadeau succesvol aangemakaakt!";
+                    this.statusMessage = "Welkomstcadeau succesvol aangemakaakt!";
                     return Promise.resolve(gift.data.data);
                 },
                 error => {
@@ -45,7 +45,7 @@ export const useGiftStore = defineStore('giftstore', {
             this.statusMessage = null;
             return GiftService.updateGift(id, body).then(
                 gift => {
-                    this.statusMessage = "Welkomscadeau succesvol aangepast!";
+                    this.statusMessage = "Welkomstcadeau succesvol aangepast!";
                     return Promise.resolve(gift.data.data);
                 },
                 error => {
@@ -57,7 +57,7 @@ export const useGiftStore = defineStore('giftstore', {
             this.statusMessage = null;
             return GiftService.deleteGift(id).then(
                 gift => {
-                    this.statusMessage = "Welkomscadeau succesvol verwijderd!";
+                    this.statusMessage = "Welkomstcadeau succesvol verwijderd!";
                     return Promise.resolve(gift.data.data);
                 },
                 error => {

@@ -24,18 +24,6 @@ export const useAuthStore = defineStore('authstore', {
                 }
             );
         },
-        // async register(user) {
-        //     return AuthService.register(user).then(
-        //         response => {
-        //             this.registerSuccess(user);
-        //             return Promise.resolve(response);
-        //         },
-        //         error => {
-        //             this.loginFailure();
-        //             return Promise.reject(error);
-        //         }
-        //     );
-        // },
         logout() {
             AuthService.logout();
             this.loggedIn = false;
@@ -50,13 +38,5 @@ export const useAuthStore = defineStore('authstore', {
             this.status.loggedIn = false;
             this.auth = null;
         },
-        // registerSuccess(user) {
-        //     this.status.loggedIn = true;
-        //     this.auth = user;
-        // },
-        // registerFailure() {
-        //     this.status.loggedIn = false;
-        //     this.auth = null;
-        // }
     },
 });

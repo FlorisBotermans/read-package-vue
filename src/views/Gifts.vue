@@ -4,7 +4,7 @@
             <v-card-title>
                 <v-text-field v-model="search" label="Zoeken" @input="userInput"></v-text-field>
                 <v-spacer></v-spacer>
-                <v-btn color="primary" @click="showCreateGiftDialog">Nieuw welkomscadeau</v-btn>
+                <v-btn color="primary" @click="showCreateGiftDialog">Nieuw welkomstcadeau</v-btn>
             </v-card-title>
             <v-data-table-server :headers="headers" :items="tableRows" :items-per-page="itemsPerPage"
                 :sort-by="sortBy.key" :sort-desc="sortBy.order" :items-length="totalItems" :loading="loadingDataTable"
@@ -32,21 +32,21 @@
         <v-dialog v-model="giftDialog" max-width="600px">
             <v-card>
                 <v-card-title>
-                    <span class="headline">{{ isEditMode ? 'Welkomscadeau Bewerken' : 'Nieuw welkomscadeau toevoegen'
+                    <span class="headline">{{ isEditMode ? 'Welkomstcadeau Bewerken' : 'Nieuw welkomstcadeau toevoegen'
                         }}</span>
                 </v-card-title>
                 <v-card-text>
                     <v-progress-linear v-if="loadingDialog" indeterminate color="blue" class="mb-3"></v-progress-linear>
                     <v-form ref="form" v-model="valid" @submit.prevent="isEditMode ? updateGift() : createGift()">
                         <v-text-field v-model="gift.name" label="Naam" required></v-text-field>
-                        <v-text-field v-model="gift.valid_after_months" label="Geldig bij (maanden)" type="number"
-                            required min="0" step="1"></v-text-field>
+                        <v-select v-model="gift.valid_after_months" :items="[3, 12, 24]" label="Geldig bij (maanden)"
+                            required item-value="value" item-text="value"></v-select>
                         <DOSpacesUploadComponent @uploaded="handleFileUploaded" @upload-start="handleUploadStart"
                             @upload-finish="handleUploadFinish" @delete-start="handleStartDeleteFile"
                             @file-deleted="handleFileDeleted" @upload-error="handleUploadError"
                             @delete-error="handleRemoveFileError" v-bind="isEditMode ? { file: gift.image_url } : {}"
                             accepted="image/jpeg,image/png"
-                            msg="Upload hier de afbeelding (alleen jpeg en png) die hoort bij dit welkomscadeau (max 5 mb).)"
+                            msg="Upload hier de afbeelding (alleen jpeg en png) die hoort bij dit welkomstcadeau (max 5 mb).)"
                             extension="jpeg" folder="gifts" :maxSize="5">
                         </DOSpacesUploadComponent>
 
@@ -66,7 +66,7 @@
         <v-dialog v-model="deleteGiftDialog" max-width="600px">
             <v-card>
                 <v-card-title>
-                    <span class="headline">Weet u zeker dat u het welkomscadeau wilt verwijderen?</span>
+                    <span class="headline">Weet u zeker dat u het welkomstcadeau wilt verwijderen?</span>
                 </v-card-title>
                 <v-card-text>
                     <v-progress-linear v-if="loadingDialog" indeterminate color="blue" class="mb-3"></v-progress-linear>
@@ -124,7 +124,7 @@ const headers = ref([
 
 const gift = ref({
     name: '',
-    valid_after_months: '',
+    valid_after_months: null,
     image_url: '',
 });
 
@@ -168,7 +168,7 @@ const getGifts = async () => {
         tableRows.value = giftStore.giftData.data;
         totalItems.value = giftStore.giftData.meta.pagination.total;
     } catch (error) {
-        showSnackbar("Niet gelukt om welkomscadeaus op te halen.", "error");
+        showSnackbar("Niet gelukt om welkomstcadeaus op te halen.", "error");
     } finally {
         loadingDataTable.value = false;
     }
@@ -180,11 +180,11 @@ const createGift = async () => {
 
         try {
             await giftStore.createGift(gift.value);
-            showSnackbar("Welkomscadeau succesvol aangemakaakt!", "success");
+            showSnackbar("Welkomstcadeau succesvol aangemakaakt!", "success");
             getGifts();
             resetGift();
         } catch (error) {
-            showSnackbar("Niet gelukt om welkomscadeau aan te maken.", "error");
+            showSnackbar("Niet gelukt om welkomstcadeau aan te maken.", "error");
         } finally {
             loadingDialog.value = false;
             giftDialog.value = false;
@@ -200,11 +200,11 @@ const updateGift = async () => {
 
         try {
             await giftStore.updateGift(gift.value.id, gift.value);
-            showSnackbar("Welkomscadeau succesvol aangepast!", "success");
+            showSnackbar("Welkomstcadeau succesvol aangepast!", "success");
             getGifts();
             resetGift();
         } catch (error) {
-            showSnackbar("Niet gelukt om welkomscadeau aan te passen.", "error");
+            showSnackbar("Niet gelukt om welkomstcadeau aan te passen.", "error");
         } finally {
             loadingDialog.value = false;
             giftDialog.value = false;
@@ -220,10 +220,10 @@ const removeGift = async (gift) => {
 
         try {
             await giftStore.deleteGift(gift.id);
-            showSnackbar("Welkomscadeau succesvol verwijderd!", "success");
+            showSnackbar("Welkomstcadeau succesvol verwijderd!", "success");
             getGifts();
         } catch (error) {
-            showSnackbar("Niet gelukt om welkomscadeau te verwijderen.", "error");
+            showSnackbar("Niet gelukt om welkomstcadeau te verwijderen.", "error");
         } finally {
             loadingDialog.value = false;
             deleteGiftDialog.value = false;
@@ -291,7 +291,7 @@ const handleFileDeleted = () => {
 const resetGift = () => {
     gift.value = {
         name: '',
-        valid_after_months: '',
+        valid_after_months: null,
         image_url: '',
     };
 };

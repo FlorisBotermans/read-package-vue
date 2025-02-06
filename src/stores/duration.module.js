@@ -22,7 +22,7 @@ export const useDurationStore = defineStore('durationstore', {
             this.statusMessage = null;
             return DurationService.createDuration(duration).then(
                 duration => {
-                    this.statusMessage = "Welkomscadeau succesvol aangemakaakt!";
+                    this.statusMessage = "Welkomstcadeau succesvol aangemakaakt!";
                     return Promise.resolve(duration.data.data);
                 },
                 error => {
@@ -45,7 +45,7 @@ export const useDurationStore = defineStore('durationstore', {
             this.statusMessage = null;
             return DurationService.updateDuration(id, body).then(
                 duration => {
-                    this.statusMessage = "Welkomscadeau succesvol aangepast!";
+                    this.statusMessage = "Welkomstcadeau succesvol aangepast!";
                     return Promise.resolve(duration.data.data);
                 },
                 error => {
@@ -57,7 +57,7 @@ export const useDurationStore = defineStore('durationstore', {
             this.statusMessage = null;
             return DurationService.deleteDuration(id).then(
                 duration => {
-                    this.statusMessage = "Welkomscadeau succesvol verwijderd!";
+                    this.statusMessage = "Welkomstcadeau succesvol verwijderd!";
                     return Promise.resolve(duration.data.data);
                 },
                 error => {

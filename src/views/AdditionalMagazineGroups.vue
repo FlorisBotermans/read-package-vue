@@ -354,9 +354,9 @@ const getMagazinesForAdditionalMagazineGroup = async (additionalMagazineGroupId)
         magazineStore.magazineData = await magazineStore.getMagazines();
         availableMagazines.value = magazineStore.magazineData.data;
 
-        additionalMagazineGroupMagazineStore.additionalMagazineGroupMagazineData = await additionalMagazineGroupMagazineStore.getMagazinesForAdditionalMagazineGroup(additionalMagazineGroupId);
+        additionalMagazineGroupMagazineStore.additionalMagazineGroupMagazinesData = await additionalMagazineGroupMagazineStore.getMagazinesForAdditionalMagazineGroup(additionalMagazineGroupId);
 
-        addedMagazines.value = additionalMagazineGroupMagazineStore.additionalMagazineGroupMagazineData.map((magazine) => ({
+        addedMagazines.value = additionalMagazineGroupMagazineStore.additionalMagazineGroupMagazinesData.map((magazine) => ({
             ...magazine,
             price: magazine.pivot.price
         }));

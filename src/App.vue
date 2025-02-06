@@ -1,6 +1,5 @@
 <template>
   <v-app>
-    <!-- App Bar -->
     <v-app-bar color="primary">
       <template v-slot:prepend>
         <v-app-bar-nav-icon v-if="currentAuth" @click="toggleDrawer"></v-app-bar-nav-icon>
@@ -8,7 +7,6 @@
 
       <v-app-bar-title>Read Package</v-app-bar-title>
 
-      <!-- User Icon Dropdown -->
       <template v-slot:append>
         <v-menu>
           <template v-slot:activator="{ props }">
@@ -18,14 +16,12 @@
           </template>
           <v-list>
             <v-list-item v-if="currentAuth">
-              <v-list-item-content>
-                <v-list-item-title class="font-weight-bold">
-                  {{ currentUser.name }}
-                </v-list-item-title>
-                <v-list-item-subtitle>
-                  {{ currentUser.email }}
-                </v-list-item-subtitle>
-              </v-list-item-content>
+              <v-list-item-title class="font-weight-bold">
+                {{ currentUser.name }}
+              </v-list-item-title>
+              <v-list-item-subtitle>
+                {{ currentUser.email }}
+              </v-list-item-subtitle>
             </v-list-item>
 
             <v-divider v-if="currentAuth"></v-divider>
@@ -44,7 +40,6 @@
       </template>
     </v-app-bar>
 
-    <!-- Navigation Drawer -->
     <v-navigation-drawer v-if="currentAuth" v-model="drawer" theme="dark" permanent>
       <v-list>
         <v-list-item link to="/subscriptions">
@@ -78,15 +73,17 @@
           <v-list-item-title>Looptijden</v-list-item-title>
         </v-list-item>
         <v-list-item link to="/gifts">
-          <v-list-item-title>Welkomscadeau's</v-list-item-title>
+          <v-list-item-title>Welkomstcadeau's</v-list-item-title>
         </v-list-item>
         <v-list-item link to="/addresses">
           <v-list-item-title>Adressen</v-list-item-title>
         </v-list-item>
+        <v-list-item link to="/subscription-orders">
+          <v-list-item-title>Bestellingen</v-list-item-title>
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
 
-    <!-- Main Content Area with Routing -->
     <v-main>
       <router-view />
     </v-main>

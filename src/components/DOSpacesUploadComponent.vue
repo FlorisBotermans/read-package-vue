@@ -10,11 +10,9 @@
                     <v-avatar size="56" class="file-thumbnail">
                         <v-img v-if="file.preview" :src="file.preview" cover />
                     </v-avatar>
-                    <v-list-item-content>
                         <v-list-item-subtitle v-if="file.uploadError" class="error-text">
                             ⚠ Fout bij het uploaden van bestanden
                         </v-list-item-subtitle>
-                    </v-list-item-content>
                     <v-list-item-action>
                         <v-tooltip bottom>
                             <template v-slot:activator="{ props }">

@@ -7,13 +7,11 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
     (config) => {
-        // List of routes that should not have authentication headers
         const excludedRoutes = [
             "/api/do-spaces/upload/request",
             "/api/do-spaces/file/"
         ];
 
-        // Check if the request URL should be excluded
         const isExcluded = excludedRoutes.some(route => config.url.startsWith(route)) ||
             config.url.includes("digitaloceanspaces.com");
 

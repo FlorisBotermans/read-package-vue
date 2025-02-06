@@ -42,7 +42,7 @@
                                         <v-list-item-title>Editie keuzes toevoegen</v-list-item-title>
                                     </v-list-item>
                                     <v-list-item @click="showAddGiftsDialog(item)">
-                                        <v-list-item-title>Welkomscadeau's toevoegen</v-list-item-title>
+                                        <v-list-item-title>Welkomstcadeau's toevoegen</v-list-item-title>
                                     </v-list-item>
                                     <v-list-item @click="showAddDurationsDialog(item)">
                                         <v-list-item-title>Looptijden toevoegen</v-list-item-title>
@@ -311,14 +311,14 @@
         <v-dialog v-model="giftDialog" max-width="600px">
             <v-card>
                 <v-card-title>
-                    <span class="headline">Welkomscadeau's toevoegen aan abonnement</span>
+                    <span class="headline">Welkomstcadeau's toevoegen aan abonnement</span>
                 </v-card-title>
                 <v-card-text>
                     <v-progress-linear v-if="loadingGifts || isAddingGifts" indeterminate color="blue"
                         class="mb-3"></v-progress-linear>
 
                     <v-combobox v-if="!loadingGifts" v-model="selectedGifts" :items="availableGifts" item-value="id"
-                        item-title="name" label="Voeg welkomscadeau's toe" multiple chips clearable
+                        item-title="name" label="Voeg welkomstcadeau's toe" multiple chips clearable
                         :disabled="loadingGifts" @update:model-value="onGiftSelectionChange"></v-combobox>
 
                     <v-btn v-if="!loadingGifts" color="primary" @click="addSelectedGiftsToTable"
@@ -338,7 +338,7 @@
                     </v-data-table>
 
                     <v-alert v-if="loadingGifts" class="mt-3">
-                        Laden van beschikbare welkomscadeau's...
+                        Laden van beschikbare welkomstcadeau's...
                     </v-alert>
                 </v-card-text>
                 <v-card-actions>
@@ -804,10 +804,10 @@ const addGiftsToSubscription = async () => {
             gift_ids: giftIds,
         });
 
-        showSnackbar("Welkomscadeau's succesvol bijgewerkt!", "success");
+        showSnackbar("Welkomstcadeau's succesvol bijgewerkt!", "success");
         giftDialog.value = false;
     } catch (error) {
-        showSnackbar("Fout bij het bijwerken van welkomscadeau's.", "error");
+        showSnackbar("Fout bij het bijwerken van welkomstcadeau's.", "error");
     } finally {
         isAddingGifts.value = false;
     }
@@ -943,7 +943,7 @@ const getGiftsForSubscription = async (subscriptionId) => {
             gift => !addedGifts.value.some(added => added.id === gift.id)
         );
     } catch (error) {
-        showSnackbar("Fout bij het ophalen van welkomscadeau's.", "error");
+        showSnackbar("Fout bij het ophalen van welkomstcadeau's.", "error");
     } finally {
         loadingGifts.value = false;
     }

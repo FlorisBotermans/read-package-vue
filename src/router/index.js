@@ -11,8 +11,9 @@ import SimpleEditionChoices from '@/views/SimpleEditionChoices.vue'
 import WeeklyEditionChoices from '@/views/WeeklyEditionChoices.vue'
 import SubscriptionAddOns from '@/views/SubscriptionAddOns.vue'
 import Login from '@/views/Login.vue'
-import Register from '@/views/Register.vue'
 import Addresses from '@/views/Addresses.vue'
+import SubscriptionOrders from '@/views/SubscriptionOrders.vue'
+import SubscriptionOrderDetails from '@/views/SubscriptionOrderDetails.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -32,11 +33,6 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: Login,
-    },
-    {
-      path: '/register',
-      name: 'register',
-      component: Register,
     },
     {
       path: '/packages',
@@ -102,6 +98,18 @@ const router = createRouter({
       path: '/addresses',
       name: 'addresses',
       component: Addresses,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/subscription-orders',
+      name: 'subscription orders',
+      component: SubscriptionOrders,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/subscription-orders/:id',
+      name: 'subscription order details',
+      component: SubscriptionOrderDetails,
       meta: { requiresAuth: true },
     },
     // {
